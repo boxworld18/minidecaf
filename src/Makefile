@@ -12,8 +12,8 @@
 LEX = flex
 YACC = bison
 DEFINES =
-CXX = g++-8
-CC = gcc-8
+CXX ?= g++
+CC ?= gcc
 INCLUDES = -I .
 CFLAGS = $(INCLUDES) $(DEFINES)  -g -Wall -pipe -DUSING_GCC
 CXXFLAGS = $(INCLUDES) $(DEFINES)  -g -Wall -pipe -DUSING_GCC
