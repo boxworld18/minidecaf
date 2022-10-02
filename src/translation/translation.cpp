@@ -165,6 +165,46 @@ void Translation::visit(ast::AddExpr *e) {
     e->ATTR(val) = tr->genAdd(e->e1->ATTR(val), e->e2->ATTR(val));
 }
 
+/* Step3 started */
+
+/* Translating an ast::SubExpr node.
+ */
+void Translation::visit(ast::SubExpr *e) {
+    e->e1->accept(this);
+    e->e2->accept(this);
+
+    e->ATTR(val) = tr->genSub(e->e1->ATTR(val), e->e2->ATTR(val));
+}
+
+/* Translating an ast::MulExpr node.
+ */
+void Translation::visit(ast::MulExpr *e) {
+    e->e1->accept(this);
+    e->e2->accept(this);
+
+    e->ATTR(val) = tr->genMul(e->e1->ATTR(val), e->e2->ATTR(val));
+}
+
+/* Translating an ast::DivExpr node.
+ */
+void Translation::visit(ast::DivExpr *e) {
+    e->e1->accept(this);
+    e->e2->accept(this);
+
+    e->ATTR(val) = tr->genDiv(e->e1->ATTR(val), e->e2->ATTR(val));
+}
+
+/* Translating an ast::ModExpr node.
+ */
+void Translation::visit(ast::ModExpr *e) {
+    e->e1->accept(this);
+    e->e2->accept(this);
+
+    e->ATTR(val) = tr->genMod(e->e1->ATTR(val), e->e2->ATTR(val));
+}
+
+/* Step3 ended */
+
 /* Translating an ast::IntConst node.
  */
 void Translation::visit(ast::IntConst *e) {
@@ -178,6 +218,26 @@ void Translation::visit(ast::NegExpr *e) {
 
     e->ATTR(val) = tr->genNeg(e->e->ATTR(val));
 }
+
+/* Step2 started */
+
+/* Translating an ast::NotExpr node.
+ */
+void Translation::visit(ast::NotExpr *e) {
+    e->e->accept(this);
+
+    e->ATTR(val) = tr->genLNot(e->e->ATTR(val));
+}
+
+/* Translating an ast::BitNotExpr node.
+ */
+void Translation::visit(ast::BitNotExpr *e) {
+    e->e->accept(this);
+
+    e->ATTR(val) = tr->genBNot(e->e->ATTR(val));
+}
+
+/* Step2 ended */
 
 /* Translating an ast::LvalueExpr node.
  *
@@ -226,23 +286,3 @@ Piece *MindCompiler::translate(ast::Program *tree) {
 
     return helper->getPiece();
 }
-
-/* Step2 started */
-
-/* Translating an ast::NotExpr node.
- */
-void Translation::visit(ast::NotExpr *e) {
-    e->e->accept(this);
-
-    e->ATTR(val) = tr->genLNot(e->e->ATTR(val));
-}
-
-/* Translating an ast::BitNotExpr node.
- */
-void Translation::visit(ast::BitNotExpr *e) {
-    e->e->accept(this);
-
-    e->ATTR(val) = tr->genBNot(e->e->ATTR(val));
-}
-
-/* Step2 ended */
