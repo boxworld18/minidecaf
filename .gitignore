@@ -54,3 +54,5 @@ debug.sh
 *.my
 *.actual
 mind.dSYM
+
+.DS_Store

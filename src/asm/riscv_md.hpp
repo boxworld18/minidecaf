@@ -94,6 +94,8 @@ struct RiscvInstr : public Instr {
         SW,
         MOVE,
         // You could add other instructions/pseudo instructions here
+        NOT,
+        SEQZ,
     } op_code; // operation code
 
     RiscvReg *r0, *r1, *r2; // 3 register operands

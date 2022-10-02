@@ -37,6 +37,9 @@ class Translation : public ast::Visitor {
     virtual void visit(ast::WhileStmt *);
     virtual void visit(ast::BreakStmt *);
 
+    virtual void visit(ast::NotExpr *);
+    virtual void visit(ast::BitNotExpr *);
+
     virtual ~Translation() {}
 
   private:

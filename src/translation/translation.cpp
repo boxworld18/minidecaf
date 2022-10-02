@@ -226,3 +226,23 @@ Piece *MindCompiler::translate(ast::Program *tree) {
 
     return helper->getPiece();
 }
+
+/* Step2 started */
+
+/* Translating an ast::NotExpr node.
+ */
+void Translation::visit(ast::NotExpr *e) {
+    e->e->accept(this);
+
+    e->ATTR(val) = tr->genLNot(e->e->ATTR(val));
+}
+
+/* Translating an ast::BitNotExpr node.
+ */
+void Translation::visit(ast::BitNotExpr *e) {
+    e->e->accept(this);
+
+    e->ATTR(val) = tr->genBNot(e->e->ATTR(val));
+}
+
+/* Step2 ended */
