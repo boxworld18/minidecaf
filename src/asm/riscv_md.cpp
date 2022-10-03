@@ -252,6 +252,38 @@ void RiscvDesc::emitTac(Tac *t) {
         emitBinaryTac(RiscvInstr::REM, t);
         break;
 
+    case Tac::EQU:
+        emitBinaryTac(RiscvInstr::SEQ, t);
+        break;
+
+    case Tac::NEQ:
+        emitBinaryTac(RiscvInstr::SNE, t);
+        break;
+
+    case Tac::LES:
+        emitBinaryTac(RiscvInstr::SLT, t);
+        break;
+    
+    case Tac::GTR:
+        emitBinaryTac(RiscvInstr::SGT, t);
+        break;
+
+    case Tac::LEQ:
+        emitBinaryTac(RiscvInstr::SLEQ, t);
+        break;
+
+    case Tac::GEQ:
+        emitBinaryTac(RiscvInstr::SGEQ, t);
+        break;
+    
+    case Tac::LAND:
+        emitBinaryTac(RiscvInstr::LAND, t);
+        break;
+    
+    case Tac::LOR:
+        emitBinaryTac(RiscvInstr::LOR, t);
+        break;
+
     default:
         mind_assert(false); // should not appear inside a basic block
     }
@@ -306,7 +338,38 @@ void RiscvDesc::emitBinaryTac(RiscvInstr::OpCode op, Tac *t) {
     int r2 = getRegForRead(t->op2.var, r1, liveness);
     int r0 = getRegForWrite(t->op0.var, r1, r2, liveness);
 
-    addInstr(op, _reg[r0], _reg[r1], _reg[r2], 0, EMPTY_STR, NULL);
+    // in risc-v, some instructions need to be implemented with several basic ones
+    switch (op) {
+        case RiscvInstr::SEQ:
+            addInstr(RiscvInstr::SUB, _reg[r0], _reg[r1], _reg[r2], 0, EMPTY_STR, NULL);
+            addInstr(RiscvInstr::SEQZ, _reg[r0], _reg[r0], NULL, 0, EMPTY_STR, NULL);
+            break;
+        case RiscvInstr::SNE:
+            addInstr(RiscvInstr::SUB, _reg[r0], _reg[r1], _reg[r2], 0, EMPTY_STR, NULL);
+            addInstr(RiscvInstr::SNEZ, _reg[r0], _reg[r0], NULL, 0, EMPTY_STR, NULL);
+            break;
+        case RiscvInstr::SLEQ:
+            addInstr(RiscvInstr::SGT, _reg[r0], _reg[r1], _reg[r2], 0, EMPTY_STR, NULL);
+            addInstr(RiscvInstr::XORI, _reg[r0], _reg[r0], NULL, 1, EMPTY_STR, NULL);
+            break;
+        case RiscvInstr::SGEQ:
+            addInstr(RiscvInstr::SLT, _reg[r0], _reg[r1], _reg[r2], 0, EMPTY_STR, NULL);
+            addInstr(RiscvInstr::XORI, _reg[r0], _reg[r0], NULL, 1, EMPTY_STR, NULL);
+            break;
+        case RiscvInstr::LOR:
+            addInstr(RiscvInstr::OR, _reg[r0], _reg[r1], _reg[r2], 0, EMPTY_STR, NULL);
+            addInstr(RiscvInstr::SNEZ, _reg[r0], _reg[r0], NULL, 0, EMPTY_STR, NULL);
+            break;
+        case RiscvInstr::LAND:
+            addInstr(RiscvInstr::SNEZ, _reg[r0], _reg[r1], NULL, 0, EMPTY_STR, NULL);
+            addInstr(RiscvInstr::SUB, _reg[r0], _reg[RiscvReg::ZERO], _reg[r0], 0, EMPTY_STR, NULL);
+            addInstr(RiscvInstr::AND, _reg[r0], _reg[r0], _reg[r2], 0, EMPTY_STR, NULL);
+            addInstr(RiscvInstr::SNEZ, _reg[r0], _reg[r0], NULL, 0, EMPTY_STR, NULL);
+            break;
+        default:
+            addInstr(op, _reg[r0], _reg[r1], _reg[r2], 0, EMPTY_STR, NULL);
+            break;
+    }
 }
 
 /* Outputs a single instruction line.
@@ -503,6 +566,7 @@ void RiscvDesc::emitInstr(RiscvInstr *i) {
         break;
 
     /* Step3 started */
+
     case RiscvInstr::SUB:
         oss << "sub" << i->r0->name << ", " << i->r1->name << ", " << i->r2->name;
         break;
@@ -520,6 +584,34 @@ void RiscvDesc::emitInstr(RiscvInstr *i) {
         break;
 
     /* Step3 ended */
+
+    /* Step4 started */
+    
+    case RiscvInstr::SLT:
+        oss << "slt" << i->r0->name << ", " << i->r1->name << ", " << i->r2->name;
+        break;
+        
+    case RiscvInstr::SGT:
+        oss << "sgt" << i->r0->name << ", " << i->r1->name << ", " << i->r2->name;
+        break;
+
+    case RiscvInstr::SNEZ:
+        oss << "snez" << i->r0->name << ", " << i->r1->name;
+        break;
+    
+    case RiscvInstr::AND:
+        oss << "and" << i->r0->name << ", " << i->r1->name << ", " << i->r2->name;
+        break;
+
+    case RiscvInstr::OR:
+        oss << "or" << i->r0->name << ", " << i->r1->name << ", " << i->r2->name;
+        break;
+    
+    case RiscvInstr::XORI:
+        oss << "xori" << i->r0->name << ", " << i->r1->name << ", " << i->i;
+        break;
+
+    /* Step4 ended */
     
     case RiscvInstr::BEQZ:
         oss << "beqz" << i->r0->name << ", " << i->l;

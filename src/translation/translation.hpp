@@ -43,6 +43,16 @@ class Translation : public ast::Visitor {
     virtual void visit(ast::NotExpr *);
     virtual void visit(ast::BitNotExpr *);
 
+    // Step4
+    virtual void visit(ast::EquExpr *);
+    virtual void visit(ast::NeqExpr *);
+    virtual void visit(ast::AndExpr *);
+    virtual void visit(ast::OrExpr *);
+    virtual void visit(ast::GeqExpr *);
+    virtual void visit(ast::LeqExpr *);
+    virtual void visit(ast::LesExpr *);
+    virtual void visit(ast::GrtExpr *);
+
     virtual void visit(ast::LvalueExpr *);
     virtual void visit(ast::VarRef *);
     virtual void visit(ast::VarDecl *);
