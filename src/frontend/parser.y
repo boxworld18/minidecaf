@@ -214,7 +214,6 @@ Expr        : ICONST
             | Expr GT Expr
                 { $$ = new ast::GrtExpr($1, $3, POS(@2)); }
             ;
-
 %%
 
 /* SECTION IV: customized section */
