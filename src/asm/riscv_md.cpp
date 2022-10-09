@@ -284,6 +284,10 @@ void RiscvDesc::emitTac(Tac *t) {
         emitBinaryTac(RiscvInstr::LOR, t);
         break;
 
+    case Tac::ASSIGN:
+        emitAssignTac(RiscvInstr::MV, t);
+        break;
+
     default:
         mind_assert(false); // should not appear inside a basic block
     }
@@ -371,6 +375,24 @@ void RiscvDesc::emitBinaryTac(RiscvInstr::OpCode op, Tac *t) {
             break;
     }
 }
+
+/* Step5 Begins
+/* Translates a Assign TAC into Riscv instructions.
+ *
+ * PARAMETERS:
+ *   t     - the Assign TAC
+ */
+void RiscvDesc::emitAssignTac(RiscvInstr::OpCode op, Tac *t) {
+    // eliminates useless assignments
+    if (!t->LiveOut->contains(t->op0.var))
+        return;
+
+    int r1 = getRegForRead(t->op1.var, 0, t->LiveOut);
+    int r0 = getRegForWrite(t->op0.var, r1, 0, t->LiveOut);
+
+    addInstr(op, _reg[r0], _reg[r1], NULL, 0, EMPTY_STR, NULL);
+}
+// Step5 ended
 
 /* Outputs a single instruction line.
  *
@@ -632,6 +654,14 @@ void RiscvDesc::emitInstr(RiscvInstr *i) {
         break;
 
     /* Step2 ended */
+
+    /* Step5 begins */
+
+    case RiscvInstr::MV:
+        oss << "mv" << i->r0->name << ", " << i->r1->name;
+        break;
+
+    /* Step5 ended */
 
     default:
         mind_assert(false); // other instructions not supported

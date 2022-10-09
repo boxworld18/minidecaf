@@ -92,6 +92,24 @@ void Translation::visit(ast::FuncDefn *f) {
  */
 void Translation::visit(ast::AssignExpr *s) {
     // TODO
+    s->left->accept(this);
+    s->e->accept(this);
+
+    switch (s->left->ATTR(lv_kind)) {
+        case ast::Lvalue::SIMPLE_VAR: {
+            const auto &sym = ((ast::VarRef*)s->left)->ATTR(sym);
+            s->ATTR(val) = sym->getTemp();
+            break;
+        }
+        case ast::Lvalue::ARRAY_ELE: {
+            // TODO: Array
+            break;
+        }
+        default:
+            mind_assert(false); // impossible
+    }
+
+    tr->genAssign(s->ATTR(val), s->e->ATTR(val));
 }
 
 /* Translating an ast::ExprStmt node.
@@ -117,6 +135,33 @@ void Translation::visit(ast::IfStmt *s) {
 
     tr->genMarkLabel(L2);
 }
+
+/* Step6 begin */
+/* Translating an ast::IfExpr node.
+ *
+ */
+void Translation::visit(ast::IfExpr *s) {
+    Label L1 = tr->getNewLabel(); // entry of the false branch
+    Label L2 = tr->getNewLabel(); // exit
+
+    Temp t = tr->getNewTempI4();
+
+    s->condition->accept(this);
+    tr->genJumpOnZero(L1, s->condition->ATTR(val));
+
+    s->true_brch->accept(this);
+    tr->genAssign(t, s->true_brch->ATTR(val));
+    tr->genJump(L2);
+
+    tr->genMarkLabel(L1);
+    s->false_brch->accept(this);
+    tr->genAssign(t, s->false_brch->ATTR(val));
+    
+    tr->genMarkLabel(L2);
+    s->ATTR(val) = t;
+}
+/* Step6 end */
+
 /* Translating an ast::WhileStmt node.
  */
 void Translation::visit(ast::WhileStmt *s) {
@@ -321,7 +366,21 @@ void Translation::visit(ast::BitNotExpr *e) {
  *   different Lvalue kinds need different translation
  */
 void Translation::visit(ast::LvalueExpr *e) {
-    // TODO
+    e->lvalue->accept(this);
+
+    switch (e->lvalue->ATTR(lv_kind)) {
+        case ast::Lvalue::SIMPLE_VAR: {
+            const auto &sym = ((ast::VarRef*)e->lvalue)->ATTR(sym);
+            e->ATTR(val) = sym->getTemp();
+            break;
+        }
+        case ast::Lvalue::ARRAY_ELE: {
+            // TODO: Array
+            break;
+        }
+        default:
+            mind_assert(false); // impossible
+    }
 }
 
 /* Translating an ast::VarRef node.
@@ -346,6 +405,15 @@ void Translation::visit(ast::VarRef *ref) {
  */
 void Translation::visit(ast::VarDecl *decl) {
     // TODO
+    Variable *var = decl->ATTR(sym);
+    Temp t = tr->getNewTempI4();
+    var->attachTemp(t);
+
+    if (decl->init != NULL) {
+        decl->init->accept(this);
+        tr->genAssign(t, decl->init->ATTR(val));
+    }
+
 }
 
 /* Translates an entire AST into a Piece list.

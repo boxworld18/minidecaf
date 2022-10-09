@@ -53,9 +53,14 @@ class Translation : public ast::Visitor {
     virtual void visit(ast::LesExpr *);
     virtual void visit(ast::GrtExpr *);
 
+    // Step5
     virtual void visit(ast::LvalueExpr *);
     virtual void visit(ast::VarRef *);
     virtual void visit(ast::VarDecl *);
+
+    // Step6
+    virtual void visit(ast::IfExpr *);
+
     virtual void visit(ast::WhileStmt *);
     virtual void visit(ast::BreakStmt *);
 

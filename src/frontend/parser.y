@@ -95,9 +95,11 @@ void scan_end();
 %nterm<mind::ast::FuncDefn* > FuncDefn
 %nterm<mind::ast::Type*> Type
 %nterm<mind::ast::Statement*> Stmt  ReturnStmt ExprStmt IfStmt  CompStmt WhileStmt 
-%nterm<mind::ast::Expr*> Expr
+%nterm<mind::ast::Expr*> Expr LvalueExpr
+%nterm<mind::ast::VarDecl* > VarDecl
+%nterm<mind::ast::VarRef* > VarRef
 /*   SUBSECTION 2.2: associativeness & precedences */
-%nonassoc QUESTION
+%right QUESTION
 %left     OR
 %left     AND
 %left EQU NEQ
@@ -145,8 +147,17 @@ StmtList    : /* empty */
             | StmtList Stmt
                 { $1->append($2);
                   $$ = $1; }
+            | StmtList VarDecl
+                { $1->append($2);
+                  $$ = $1; }
             ;
 
+VarDecl     : Type IDENTIFIER SEMICOLON
+                { $$ = new ast::VarDecl($2, $1, POS(@2)); } |
+              Type IDENTIFIER ASSIGN Expr SEMICOLON
+                { $$ = new ast::VarDecl($2, $1, $4, POS(@3)); }
+            ;
+            
 Stmt        : ReturnStmt {$$ = $1;}|
               ExprStmt   {$$ = $1;}|
               IfStmt     {$$ = $1;}|
@@ -155,7 +166,7 @@ Stmt        : ReturnStmt {$$ = $1;}|
               BREAK SEMICOLON  
                 {$$ = new ast::BreakStmt(POS(@1));} |
               SEMICOLON
-                {$$ = new ast::EmptyStmt(POS(@1));}
+                {$$ = new ast::EmptyStmt(POS(@1));} 
             ;
 CompStmt    : LBRACE StmtList RBRACE
                 {$$ = new ast::CompStmt($2,POS(@1));}
@@ -213,7 +224,20 @@ Expr        : ICONST
                 { $$ = new ast::LesExpr($1, $3, POS(@2)); }
             | Expr GT Expr
                 { $$ = new ast::GrtExpr($1, $3, POS(@2)); }
+            | VarRef ASSIGN Expr
+                { $$ = new ast::AssignExpr($1, $3, POS(@2)); }
+            | LvalueExpr
+                { $$ = $1; }
             ;
+
+LvalueExpr  : VarRef
+                { $$ = new ast::LvalueExpr($1, POS(@1));}
+            ;
+
+VarRef      : IDENTIFIER
+                { $$ = new ast::VarRef($1, POS(@1)); }
+            ;
+
 
 %%
 

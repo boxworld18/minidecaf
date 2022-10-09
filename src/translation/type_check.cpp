@@ -54,6 +54,9 @@ class SemPass2 : public ast::Visitor {
     virtual void visit(ast::LesExpr *);
     virtual void visit(ast::GrtExpr *);
 
+    // Step6
+    virtual void visit(ast::IfExpr *);
+
     virtual void visit(ast::LvalueExpr *);
     virtual void visit(ast::VarRef *);
     // Visiting statements
@@ -418,6 +421,26 @@ void SemPass2::visit(ast::AssignExpr *s) {
 
     s->ATTR(type) = s->left->ATTR(type);
 }
+
+/* Step6 begin */
+/* Visits an ast::IfExpr node.
+ *
+ * PARAMETERS:
+ *   e     - the ast::IfExpr node
+ */
+void SemPass2::visit(ast::IfExpr *s) {
+    s->condition->accept(this);
+    if (!s->condition->ATTR(type)->equal(BaseType::Int)) {
+        issue(s->condition->getLocation(), new BadTestExprError());
+        ;
+    }
+
+    s->true_brch->accept(this);
+    s->false_brch->accept(this);
+
+    s->ATTR(type) = BaseType::Int;
+}
+/* Step6 end */
 
 /* Visits an ast::ExprStmt node.
  *

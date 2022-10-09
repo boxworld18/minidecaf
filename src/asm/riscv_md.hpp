@@ -113,6 +113,9 @@ struct RiscvInstr : public Instr {
         OR,
         XORI,
 
+        // Step5
+        MV,
+
         // Local pseudo instructions
         
         // Step4
@@ -122,6 +125,7 @@ struct RiscvInstr : public Instr {
         SGEQ,
         LAND,
         LOR
+
     } op_code; // operation code
 
     RiscvReg *r0, *r1, *r2; // 3 register operands
@@ -175,6 +179,10 @@ class RiscvDesc : public MachineDesc {
     // translates a Binary TAC into assembly instructions
     void emitBinaryTac(RiscvInstr::OpCode, tac::Tac *);
 
+    // Step5
+    // translates a Assign TAC into assembly instructions
+    void emitAssignTac(RiscvInstr::OpCode, tac::Tac *);
+    
     // outputs an instruction
     void emit(std::string, const char *, const char *);
     // outputs a function

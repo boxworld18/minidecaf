@@ -166,11 +166,26 @@ void SemPass1::visit(ast::VarDecl *vdecl) {
 
     // TODO: Add a new symbol to a scope
     // 1. Create a new `Variable` symbol
+    Variable *v = new Variable(vdecl->name, t, vdecl->getLocation());
+
     // 2. Check for conflict in `scopes`, which is a global variable refering to
     // a scope stack
+    Symbol *sym = scopes->lookup(vdecl->name, vdecl->getLocation());
+    
     // 3. Declare the symbol in `scopes`
+    if (NULL != sym && vdecl->name != "main")
+        issue(vdecl->getLocation(), new DeclConflictError(vdecl->name, sym));
+    else
+        scopes->declare(v);
+
+    if (vdecl->init != NULL)
+        vdecl->init->accept(this);
     // 4. Special processing for global variables
+    
+    
     // 5. Tag the symbol to `vdecl->ATTR(sym)`
+    vdecl->ATTR(sym) = v;
+    
 }
 
 /* Visiting an ast::IntType node.
