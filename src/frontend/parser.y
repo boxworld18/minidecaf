@@ -131,13 +131,14 @@ FoDList :
                   $$ = $1; }
                 }
 
-FuncDefn : Type IDENTIFIER LPAREN FormalList RPAREN LBRACE StmtList RBRACE {
+FuncDefn    : Type IDENTIFIER LPAREN FormalList RPAREN LBRACE StmtList RBRACE {
               $$ = new ast::FuncDefn($2,$1,$4,$7,POS(@1));
-          } |
-          Type IDENTIFIER LPAREN FormalList RPAREN SEMICOLON{
+            }
+            | Type IDENTIFIER LPAREN FormalList RPAREN SEMICOLON{
               $$ = new ast::FuncDefn($2,$1,$4,new ast::EmptyStmt(POS(@6)),POS(@1));
-          }
-FormalList :  /* EMPTY */
+            }
+        
+FormalList  :  /* EMPTY */
             {$$ = new ast::VarList();} 
 
 Type        : INT
