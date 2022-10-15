@@ -66,6 +66,10 @@ class ASTNode {
         VAR_REF,
         WHILE_STMT,
         FOD,
+        FOR_STMT,
+        CONT_STMT,
+        DO_WHILE_STMT,
+        NULL_EXPR
     } NodeType;
 
   protected:
@@ -286,6 +290,45 @@ class ReturnStmt : public Statement {
 
   public:
     Expr *e;
+};
+
+/* Node representing a for statement.
+ *
+ * SERIALIZED FORM:
+ *   (FOR INIT CONDITION ITERATION LOOP_BODY)
+ */
+class ForStmt : public Statement {
+  public:
+    ForStmt(Statement *init, Expr *cond, Expr *iter, Statement *body, Location *l);
+    // ForStmt(Expr *init, Expr *cond, Expr *iter, Statement *body, Location *l);
+    virtual void accept(Visitor *);
+    virtual void dumpTo(std::ostream &);
+
+  public:
+    Statement *init;
+    // Expr *init;
+    Expr *cond;
+    Expr *iter;
+    Statement *body;
+
+    scope::Scope *ATTR(scope);
+};
+
+/* Node representing a do-while statement.
+ *
+ * SERIALIZED FORM:
+ *   (while CONDITION LOOP_BODY)
+ */
+class DoWhileStmt : public Statement {
+  public:
+    DoWhileStmt(Expr *cond, Statement *loop_body, Location *l);
+
+    virtual void accept(Visitor *);
+    virtual void dumpTo(std::ostream &);
+
+  public:
+    Expr *condition;
+    Statement *loop_body;
 };
 
 /* Node representing a while statement.

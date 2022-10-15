@@ -1,9 +1,9 @@
 /*****************************************************
- *  Implementation of "WhileStmt".
+ *  Implementation of "ForStmt".
  *
  *  Please refer to ast/ast.hpp for the definition.
  *
- *  Keltin Leung 
+ *  IL Iong
  */
 
 #include "ast/ast.hpp"
@@ -13,19 +13,21 @@
 using namespace mind;
 using namespace mind::ast;
 
-/* Creates a new WhileStmt node.
+/* Creates a new ForStmt node.
  *
  * PARAMETERS:
  *   cond    - the test expression
  *   body    - the loop body
  *   l       - position in the source text
  */
-WhileStmt::WhileStmt(Expr *cond, Statement *body, Location *l) {
+ForStmt::ForStmt(Statement *_init, Expr *_cond, Expr *_iter, Statement *_body, Location *l) {
 
-    setBasicInfo(WHILE_STMT, l);
+    setBasicInfo(FOR_STMT, l);
 
-    condition = cond;
-    loop_body = body;
+    init = _init;
+    cond = _cond;
+    iter = _iter;
+    body = _body;
 }
 
 /* Visits the current node.
@@ -33,82 +35,73 @@ WhileStmt::WhileStmt(Expr *cond, Statement *body, Location *l) {
  * PARAMETERS:
  *   v       - the visitor
  */
-void WhileStmt::accept(Visitor *v) { v->visit(this); }
+void ForStmt::accept(Visitor *v) { v->visit(this); }
 
 /* Prints the current AST node.
  *
  * PARAMETERS:
  *   os      - the output stream
  */
-void WhileStmt::dumpTo(std::ostream &os) {
+void ForStmt::dumpTo(std::ostream &os) {
     ASTNode::dumpTo(os);
     newLine(os);
-    os << condition;
-
+    os << init;
     newLine(os);
-    os << loop_body << ")";
+    os << cond;
+    newLine(os);
+    os << iter;
+    newLine(os);
+    os << body << ")";
     decIndent(os);
 }
 
-/* Creates a new BreakStmt node.
+/* Creates a new ContStmt node.
  *
  * PARAMETERS:
  *   l       - position in the source text
  */
-BreakStmt::BreakStmt(Location *l) { setBasicInfo(BREAK_STMT, l); }
+ContStmt::ContStmt(Location *l) { setBasicInfo(CONT_STMT, l); }
 
 /* Visits the current node.
  *
  * PARAMETERS:
  *   v       - the visitor
  */
-void BreakStmt::accept(Visitor *v) { v->visit(this); }
+void ContStmt::accept(Visitor *v) { v->visit(this); }
 
 /* Prints the current AST node.
  *
  * PARAMETERS:
  *   os      - the output stream
  */
-void BreakStmt::dumpTo(std::ostream &os) {
+void ContStmt::dumpTo(std::ostream &os) {
     ASTNode::dumpTo(os);
     newLine(os);
     decIndent(os);
 }
 
-/* Creates a new DoWhileStmt node.
+/* Creates a new NullExpr node.
  *
  * PARAMETERS:
- *   cond    - the test expression
- *   body    - the loop body
  *   l       - position in the source text
  */
-DoWhileStmt::DoWhileStmt(Expr *cond, Statement *body, Location *l) {
-
-    setBasicInfo(DO_WHILE_STMT, l);
-
-    condition = cond;
-    loop_body = body;
-}
+NullExpr::NullExpr(Location *l) { setBasicInfo(NULL_EXPR, l); }
 
 /* Visits the current node.
  *
  * PARAMETERS:
  *   v       - the visitor
  */
-void DoWhileStmt::accept(Visitor *v) { v->visit(this); }
+void NullExpr::accept(Visitor *v) { v->visit(this); }
 
 /* Prints the current AST node.
  *
  * PARAMETERS:
  *   os      - the output stream
  */
-void DoWhileStmt::dumpTo(std::ostream &os) {
+void NullExpr::dumpTo(std::ostream &os) {
     ASTNode::dumpTo(os);
+    os << "Nullptr";
     newLine(os);
-    os << condition;
-
-    newLine(os);
-    os << loop_body << ")";
     decIndent(os);
 }
-

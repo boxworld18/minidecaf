@@ -51,6 +51,7 @@ class Visitor {
     virtual void visit(NotExpr *) {}
     virtual void visit(BitNotExpr *) {}
     virtual void visit(SubExpr *) {}
+    virtual void visit(NullExpr *) {}
 
     // Lvalues
     virtual void visit(VarRef *) {}
@@ -66,6 +67,10 @@ class Visitor {
     virtual void visit(BreakStmt *) {}
     virtual void visit(IfStmt *) {}
     virtual void visit(ReturnStmt *) {}
+    virtual void visit(ForStmt *) {}
+    virtual void visit(ContStmt *) {}
+    virtual void visit(DoWhileStmt *) {}
+
     // Declarations
     virtual void visit(Program *) = 0;
     virtual void visit(FuncDefn *) {}

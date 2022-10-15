@@ -38,6 +38,8 @@ class SemPass1 : public ast::Visitor {
     virtual void visit(ast::WhileStmt *);
     virtual void visit(ast::CompStmt *);
     virtual void visit(ast::VarDecl *);
+    virtual void visit(ast::ForStmt *);
+    virtual void visit(ast::DoWhileStmt *);
     // visiting types
     virtual void visit(ast::IntType *);
 };
@@ -134,6 +136,36 @@ void SemPass1::visit(ast::WhileStmt *s) {
     s->loop_body->accept(this);
 }
 
+/* Visits an ast::DoWhileStmt node.
+ *
+ * PARAMETERS:
+ *   e     - the ast::DoWhileStmt node
+ */
+void SemPass1::visit(ast::DoWhileStmt *s) {
+    s->loop_body->accept(this);
+    s->condition->accept(this);
+}
+
+/* Visiting an ast::ForStmt node.
+ */
+void SemPass1::visit(ast::ForStmt *s) {
+    // opens function scope
+    Scope *scope = new LocalScope();
+    s->ATTR(scope) = scope;
+    scopes->open(scope);
+
+    // adds the local variables
+    if (s->init != NULL) s->init->accept(this);
+    if (s->cond != NULL) s->cond->accept(this);
+    if (s->iter != NULL) s->iter->accept(this);
+
+    if (s->body != NULL) s->body->accept(this);
+
+    // closes function scope
+    scopes->close();
+}
+
+
 /* Visiting an ast::CompStmt node.
  */
 void SemPass1::visit(ast::CompStmt *c) {
@@ -149,6 +181,7 @@ void SemPass1::visit(ast::CompStmt *c) {
     // closes function scope
     scopes->close();
 }
+
 /* Visiting an ast::VarDecl node.
  *
  * NOTE:

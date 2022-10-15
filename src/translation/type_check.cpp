@@ -66,6 +66,11 @@ class SemPass2 : public ast::Visitor {
     virtual void visit(ast::IfStmt *);
     virtual void visit(ast::ReturnStmt *);
     virtual void visit(ast::WhileStmt *);
+
+    // Step8
+    virtual void visit(ast::ForStmt *);
+    virtual void visit(ast::DoWhileStmt *);
+
     // Visiting declarations
     virtual void visit(ast::FuncDefn *);
     virtual void visit(ast::Program *);
@@ -489,6 +494,46 @@ void SemPass2::visit(ast::WhileStmt *s) {
 
     s->loop_body->accept(this);
 }
+
+/* Step8 begin */
+
+/* Visits an ast::ForStmt node.
+ *
+ * PARAMETERS:
+ *   s     - the ast::ForStmt node
+ */
+void SemPass2::visit(ast::ForStmt *s) {
+    scopes->open(s->ATTR(scope));
+
+    if (s->cond) {
+        s->cond->accept(this);
+        if (!s->cond->ATTR(type)->equal(BaseType::Int)) {
+            issue(s->cond->getLocation(), new BadTestExprError());
+        }
+    }
+
+    if (s->init) s->init->accept(this);
+    if (s->iter) s->iter->accept(this);
+    s->body->accept(this);
+    
+    scopes->close();
+}
+
+/* Visits an ast::DoWhileStmt node.
+ *
+ * PARAMETERS:
+ *   s     - the ast::DoWhileStmt node
+ */
+void SemPass2::visit(ast::DoWhileStmt *s) {
+    s->loop_body->accept(this);
+    s->condition->accept(this);
+    if (!s->condition->ATTR(type)->equal(BaseType::Int)) {
+        issue(s->condition->getLocation(), new BadTestExprError());
+    }
+}
+
+
+/* Step8 end*/
 
 /* Visits an ast::ReturnStmt node.
  *

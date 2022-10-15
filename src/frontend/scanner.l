@@ -102,8 +102,11 @@ IDENTIFIER    ([A-Za-z][_0-9A-Za-z]*)
 
 "if"        { return yy::parser::make_IF  (loc); }
 "else"      { return yy::parser::make_ELSE  (loc); }
+"do"        { return yy::parser::make_DO (loc); }
 "while"     { return yy::parser::make_WHILE (loc); }
+"for"       { return yy::parser::make_FOR (loc); }
 "break"     { return yy::parser::make_BREAK (loc); }
+"continue"  { return yy::parser::make_CONTINUE (loc); }
 
 {INTEGER}     {return make_ICONST(yytext, loc);}
 

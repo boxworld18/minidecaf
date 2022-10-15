@@ -59,6 +59,7 @@ void scan_end();
    WHILE "while"
    FOR "for"
    BREAK "break"
+   CONTINUE "continue"
    EQU "=="
    NEQ "!="
    AND "&&" 
@@ -94,8 +95,9 @@ void scan_end();
 %nterm<mind::ast::Program* > Program FoDList
 %nterm<mind::ast::FuncDefn* > FuncDefn
 %nterm<mind::ast::Type*> Type
-%nterm<mind::ast::Statement*> Stmt  ReturnStmt ExprStmt IfStmt  CompStmt WhileStmt 
-%nterm<mind::ast::Expr*> Expr LvalueExpr
+%nterm<mind::ast::Statement*> Stmt ReturnStmt ExprStmt IfStmt  CompStmt WhileStmt BreakStmt ContStmt DoWhileStmt
+%nterm<mind::ast::ForStmt*> ForStmt
+%nterm<mind::ast::Expr*> Expr LvalueExpr OptExpr
 %nterm<mind::ast::VarDecl* > VarDecl
 %nterm<mind::ast::VarRef* > VarRef
 /*   SUBSECTION 2.2: associativeness & precedences */
@@ -123,26 +125,24 @@ Program     : FoDList
                 { /* we don't write $$ = XXX here. */
 				  setParseTree($1); }
             ;
-FoDList :   
-            FuncDefn 
-                {$$ = new ast::Program($1,POS(@1)); } |
-            FoDList FuncDefn{
-                 {$1->func_and_globals->append($2);
+FoDList     : FuncDefn 
+                { $$ = new ast::Program($1,POS(@1)); }
+            | FoDList FuncDefn{
+                { $1->func_and_globals->append($2);
                   $$ = $1; }
                 }
 
-FuncDefn    : Type IDENTIFIER LPAREN FormalList RPAREN LBRACE StmtList RBRACE {
-              $$ = new ast::FuncDefn($2,$1,$4,$7,POS(@1));
-            }
-            | Type IDENTIFIER LPAREN FormalList RPAREN SEMICOLON{
-              $$ = new ast::FuncDefn($2,$1,$4,new ast::EmptyStmt(POS(@6)),POS(@1));
-            }
+FuncDefn    : Type IDENTIFIER LPAREN FormalList RPAREN LBRACE StmtList RBRACE
+                { $$ = new ast::FuncDefn($2,$1,$4,$7,POS(@1)); }
+            | Type IDENTIFIER LPAREN FormalList RPAREN SEMICOLON
+                { $$ = new ast::FuncDefn($2,$1,$4,new ast::EmptyStmt(POS(@6)),POS(@1)); }
         
-FormalList  :  /* EMPTY */
-            {$$ = new ast::VarList();} 
+FormalList  : /* EMPTY */
+                { $$ = new ast::VarList(); } 
 
 Type        : INT
                 { $$ = new ast::IntType(POS(@1)); }
+
 StmtList    : /* empty */
                 { $$ = new ast::StmtList(); }
             | StmtList Stmt
@@ -154,23 +154,38 @@ StmtList    : /* empty */
             ;
 
 VarDecl     : Type IDENTIFIER SEMICOLON
-                { $$ = new ast::VarDecl($2, $1, POS(@2)); } |
-              Type IDENTIFIER ASSIGN Expr SEMICOLON
+                { $$ = new ast::VarDecl($2, $1, POS(@2)); }
+            | Type IDENTIFIER ASSIGN Expr SEMICOLON
                 { $$ = new ast::VarDecl($2, $1, $4, POS(@3)); }
             ;
             
-Stmt        : ReturnStmt {$$ = $1;}|
-              ExprStmt   {$$ = $1;}|
-              IfStmt     {$$ = $1;}|
-              WhileStmt  {$$ = $1;}|
-              CompStmt   {$$ = $1;}|
-              BREAK SEMICOLON  
-                {$$ = new ast::BreakStmt(POS(@1));} |
-              SEMICOLON
-                {$$ = new ast::EmptyStmt(POS(@1));} 
+Stmt        : ReturnStmt  { $$ = $1; }
+            | ExprStmt    { $$ = $1; }
+            | IfStmt      { $$ = $1; }
+            | WhileStmt   { $$ = $1; }
+            | CompStmt    { $$ = $1; }
+            | BreakStmt   { $$ = $1; }
+            | ForStmt     { $$ = $1; }
+            | ContStmt    { $$ = $1; }
+            | DoWhileStmt { $$ = $1; }
+            ;
+ForStmt     : FOR LPAREN ExprStmt OptExpr SEMICOLON OptExpr RPAREN Stmt
+                { $$ = new ast::ForStmt($3, $4, $6, $8, POS(@1)); }
+            | FOR LPAREN VarDecl OptExpr SEMICOLON OptExpr RPAREN Stmt
+                { $$ = new ast::ForStmt($3, $4, $6, $8, POS(@1)); }
+        
+            ;
+ContStmt    : CONTINUE SEMICOLON
+                { $$ = new ast::ContStmt(POS(@1)); }
+            ;
+DoWhileStmt : DO Stmt WHILE LPAREN Expr RPAREN SEMICOLON
+                { $$ = new ast::DoWhileStmt($5, $2, POS(@1)); }
+            ;
+BreakStmt   : BREAK SEMICOLON
+                { $$ = new ast::BreakStmt(POS(@1)); }
             ;
 CompStmt    : LBRACE StmtList RBRACE
-                {$$ = new ast::CompStmt($2,POS(@1));}
+                { $$ = new ast::CompStmt($2,POS(@1)); }
             ;
 WhileStmt   : WHILE LPAREN Expr RPAREN Stmt
                 { $$ = new ast::WhileStmt($3, $5, POS(@1)); }
@@ -185,8 +200,17 @@ ReturnStmt  : RETURN Expr SEMICOLON
                 { $$ = new ast::ReturnStmt($2, POS(@1)); }
             ;
 ExprStmt    : Expr SEMICOLON
-                { $$ = new ast::ExprStmt($1, POS(@1)); } 
-            ;         
+                { $$ = new ast::ExprStmt($1, POS(@1)); }
+            | SEMICOLON
+                { $$ = new ast::EmptyStmt(POS(@1)); } 
+            ;
+
+OptExpr     : /* EMPTY */
+                { $$ = nullptr; } 
+            | Expr
+                { $$ = $1; }
+            ;
+            
 Expr        : ICONST
                 { $$ = new ast::IntConst($1, POS(@1)); }            
             | LPAREN Expr RPAREN

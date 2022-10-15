@@ -169,6 +169,9 @@ void Translation::visit(ast::WhileStmt *s) {
     Label L2 = tr->getNewLabel();
 
     Label old_break = current_break_label;
+    Label old_continue = current_continue_label;
+
+    current_continue_label = L1;
     current_break_label = L2;
 
     tr->genMarkLabel(L1);
@@ -180,12 +183,80 @@ void Translation::visit(ast::WhileStmt *s) {
 
     tr->genMarkLabel(L2);
 
+    current_continue_label = old_continue;
     current_break_label = old_break;
 }
 
 /* Translating an ast::BreakStmt node.
  */
 void Translation::visit(ast::BreakStmt *s) { tr->genJump(current_break_label); }
+
+/* Step8 begin */
+
+/* Translating an ast::DoWhileStmt node.
+ */
+void Translation::visit(ast::DoWhileStmt *s) {
+    Label L1 = tr->getNewLabel();
+    Label L2 = tr->getNewLabel();
+
+    Label old_break = current_break_label;
+    Label old_continue = current_continue_label;
+
+    current_continue_label = L1;
+    current_break_label = L2;
+
+    tr->genMarkLabel(L1);
+    s->loop_body->accept(this);
+
+    s->condition->accept(this);
+    tr->genJumpOnZero(L2, s->condition->ATTR(val));
+    tr->genJump(L1);
+
+    tr->genMarkLabel(L2);
+
+    current_continue_label = old_continue;
+    current_break_label = old_break;
+}
+
+/* Translating an ast::ForStmt node.
+ */
+void Translation::visit(ast::ForStmt *s) {
+    Label L1 = tr->getNewLabel();
+    Label L2 = tr->getNewLabel();
+    Label L3 = tr->getNewLabel();
+
+    Label old_break = current_break_label;
+    Label old_continue = current_continue_label;
+
+    current_continue_label = L2;
+    current_break_label = L3;
+
+    if (s->init) s->init->accept(this);
+    tr->genMarkLabel(L1);
+
+    if (s->cond) {
+        s->cond->accept(this);
+        tr->genJumpOnZero(L3, s->cond->ATTR(val));
+    }
+
+    s->body->accept(this);
+
+    tr->genMarkLabel(L2);
+
+    if (s->iter) s->iter->accept(this);
+    tr->genJump(L1);
+
+    tr->genMarkLabel(L3);
+
+    current_continue_label = old_continue;
+    current_break_label = old_break;
+}
+
+/* Translating an ast::ContStmt node.
+ */
+void Translation::visit(ast::ContStmt *s) { tr->genJump(current_continue_label); }
+
+/* Step8 end */
 
 /* Translating an ast::CompStmt node.
  */
