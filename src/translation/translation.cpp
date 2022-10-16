@@ -85,7 +85,7 @@ void Translation::visit(ast::FuncDefn *f) {
     tr->endFunc();
 }
 
-/* Translating an ast::AssignStmt node.
+/* Translating an ast::AssignExpr node.
  *
  * NOTE:
  *   different kinds of Lvalue require different translation
@@ -404,7 +404,6 @@ void Translation::visit(ast::VarRef *ref) {
 /* Translating an ast::VarDecl node.
  */
 void Translation::visit(ast::VarDecl *decl) {
-    // TODO
     Variable *var = decl->ATTR(sym);
     Temp t = tr->getNewTempI4();
     var->attachTemp(t);
@@ -413,7 +412,6 @@ void Translation::visit(ast::VarDecl *decl) {
         decl->init->accept(this);
         tr->genAssign(t, decl->init->ATTR(val));
     }
-
 }
 
 /* Translates an entire AST into a Piece list.

@@ -170,10 +170,10 @@ void SemPass1::visit(ast::VarDecl *vdecl) {
 
     // 2. Check for conflict in `scopes`, which is a global variable refering to
     // a scope stack
-    Symbol *sym = scopes->lookup(vdecl->name, vdecl->getLocation());
+    Symbol *sym = scopes->lookup(vdecl->name, vdecl->getLocation(), false);
     
     // 3. Declare the symbol in `scopes`
-    if (NULL != sym && vdecl->name != "main")
+    if (NULL != sym)
         issue(vdecl->getLocation(), new DeclConflictError(vdecl->name, sym));
     else
         scopes->declare(v);
