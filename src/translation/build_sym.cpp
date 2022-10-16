@@ -159,7 +159,7 @@ void SemPass1::visit(ast::ForStmt *s) {
     if (s->cond != NULL) s->cond->accept(this);
     if (s->iter != NULL) s->iter->accept(this);
 
-    if (s->body != NULL) s->body->accept(this);
+    s->body->accept(this);
 
     // closes function scope
     scopes->close();
@@ -206,7 +206,7 @@ void SemPass1::visit(ast::VarDecl *vdecl) {
     Symbol *sym = scopes->lookup(vdecl->name, vdecl->getLocation(), false);
     
     // 3. Declare the symbol in `scopes`
-    if (NULL != sym && vdecl->name != "main")
+    if (NULL != sym)
         issue(vdecl->getLocation(), new DeclConflictError(vdecl->name, sym));
     else
         scopes->declare(v);
