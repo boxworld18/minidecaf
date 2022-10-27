@@ -1,3 +1,6 @@
 cd src/
-./mind -l 3 ../minidecaf-tests/testcases/step6/assign_ternary.c
+make CXX=g++-8 CC=gcc-8
+cd ..
+cd src/
+./mind -l 1 ../minidecaf-tests/failcases/step6/badif.c
 cd ../minidecaf-tests
