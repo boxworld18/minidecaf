@@ -18,6 +18,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <sstream>
+#include <cassert>
 
 using namespace mind;
 using namespace mind::symb;
@@ -45,6 +46,7 @@ void mind::err::issue(Location *loc, MindError *err) {
     oss << ".";
 
     ebuff.add(loc, oss.str());
+    assert(false);
 
     ++num_of_errors;
 }
