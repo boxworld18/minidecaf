@@ -71,6 +71,9 @@ class SemPass2 : public ast::Visitor {
     virtual void visit(ast::ForStmt *);
     virtual void visit(ast::DoWhileStmt *);
 
+    // Step9
+    virtual void visit(ast::CallExpr *);
+
     // Visiting declarations
     virtual void visit(ast::FuncDefn *);
     virtual void visit(ast::Program *);
@@ -534,6 +537,54 @@ void SemPass2::visit(ast::DoWhileStmt *s) {
 
 
 /* Step8 end*/
+
+/* Step9 begin */
+
+/* Visits an ast::CallExpr node.
+ *
+ * PARAMETERS:
+ *   e     - the ast::CallExpr node
+ */
+
+void SemPass2::visit(ast::CallExpr *e) {
+
+    Symbol *s = scopes->lookup(e->ident, e->getLocation());
+    if (NULL == s) {
+        issue(e->getLocation(), new SymbolNotFoundError(e->ident));
+    } else if (!s->isFunction()) {
+        issue(e->getLocation(), new NotMethodError(s));
+    } else {
+        Function *f = (Function *)s;
+        e->ATTR(type) = f->getResultType();
+        e->ATTR(sym) = f;
+
+        scopes->open(f->getAssociatedScope());
+
+        // compare values amounts
+        if (f->getType()->numOfParameters() != e->args->length()) {
+            issue(e->getLocation(), new BadArgCountError(f));
+        }
+
+        ast::ExprList::iterator it;
+
+        util::List<Type *> *type_list = f->getType()->getArgList();
+        util::List<Type *>::iterator type_it = type_list->begin();
+
+        // compare arg type
+        for (it = e->args->begin(); it != e->args->end(); ++it){
+            (*it)->accept(this);
+            if (!(*it)->ATTR(type)->compatible(*type_it)) {
+                issue(e->getLocation(), new UnexpectedTypeError((*it)->ATTR(type), *type_it));
+                type_it ++;
+            }
+        }
+
+        scopes->close();
+    }
+
+    return;
+}
+/* Step9 end*/
 
 /* Visits an ast::ReturnStmt node.
  *

@@ -65,6 +65,8 @@ class TransHelper {
     void genJump(Label);
     void genJumpOnZero(Label, Temp);
     void genReturn(Temp);
+    // Functy
+    Temp genCall(Label);
     // Miscellaneous
     void genAssign(Temp, Temp);
     Temp genLoadImm4(int);

@@ -69,6 +69,9 @@ class Translation : public ast::Visitor {
     virtual void visit(ast::DoWhileStmt *);
     virtual void visit(ast::ContStmt *);
 
+    // Step9
+    virtual void visit(ast::CallExpr *);
+
     virtual ~Translation() {}
 
   private:

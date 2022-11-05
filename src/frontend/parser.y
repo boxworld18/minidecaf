@@ -91,7 +91,7 @@ void scan_end();
 %token <std::string> IDENTIFIER "identifier"
 %token<int> ICONST "iconst"
 %nterm<mind::ast::StmtList*> StmtList
-%nterm<mind::ast::VarList* > FormalList 
+%nterm<mind::ast::VarList* > FormalList ParamList
 %nterm<mind::ast::Program* > Program FoDList
 %nterm<mind::ast::FuncDefn* > FuncDefn
 %nterm<mind::ast::Type*> Type
@@ -100,8 +100,9 @@ void scan_end();
 %nterm<mind::ast::Expr*> Expr LvalueExpr OptExpr
 %nterm<mind::ast::VarDecl* > VarDecl
 %nterm<mind::ast::VarRef* > VarRef
+%nterm<mind::ast::ExprList*> ExprList OptExprList
 /*   SUBSECTION 2.2: associativeness & precedences */
-%right QUESTION
+%nonassoc QUESTION
 %left     OR
 %left     AND
 %left EQU NEQ
@@ -123,7 +124,7 @@ void scan_end();
 %%
 Program     : FoDList
                 { /* we don't write $$ = XXX here. */
-				  setParseTree($1); }
+				          setParseTree($1); }
             ;
 FoDList     : FuncDefn 
                 { $$ = new ast::Program($1,POS(@1)); }
@@ -136,9 +137,21 @@ FuncDefn    : Type IDENTIFIER LPAREN FormalList RPAREN LBRACE StmtList RBRACE
                 { $$ = new ast::FuncDefn($2,$1,$4,$7,POS(@1)); }
             | Type IDENTIFIER LPAREN FormalList RPAREN SEMICOLON
                 { $$ = new ast::FuncDefn($2,$1,$4,new ast::EmptyStmt(POS(@6)),POS(@1)); }
-        
+            ;
+
 FormalList  : /* EMPTY */
-                { $$ = new ast::VarList(); } 
+                { $$ = new ast::VarList(); }
+            | ParamList
+                { $$ = $1; }
+            ;
+            
+ParamList   : Type IDENTIFIER
+                { $$ = new ast::VarList();
+                  $$->append(new ast::VarDecl($2,$1,POS(@1))); }
+            | ParamList COMMA Type IDENTIFIER
+                { $1->append(new ast::VarDecl($4,$3,POS(@3)));
+                  $$ = $1; }
+            ;
 
 Type        : INT
                 { $$ = new ast::IntType(POS(@1)); }
@@ -253,6 +266,20 @@ Expr        : ICONST
                 { $$ = new ast::AssignExpr($1, $3, POS(@2)); }
             | LvalueExpr
                 { $$ = $1; }
+            | IDENTIFIER LPAREN ExprList RPAREN
+                { $$ = new ast::CallExpr($1, $3, POS(@1)); }
+            ;
+
+ExprList    : /* EMPTY */
+                { $$ = new ast::ExprList(); }
+            | OptExprList
+                { $$ = $1; }
+
+OptExprList : Expr
+                { $$ = new ast::ExprList($1); }
+            | ExprList COMMA Expr
+                { $1->append($3);
+                  $$ = $1; }
             ;
 
 LvalueExpr  : VarRef

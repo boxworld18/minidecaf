@@ -58,7 +58,8 @@ const char *ASTNode::node_name[] = {"add",
                                     "for",
                                     "continue",
                                     "do-while",
-                                    "null"};
+                                    "null"
+                                    };
 
 /*  Whether to print the decorated abstract syntax tree.
  */

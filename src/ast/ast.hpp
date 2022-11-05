@@ -69,7 +69,7 @@ class ASTNode {
         FOR_STMT,
         CONT_STMT,
         DO_WHILE_STMT,
-        NULL_EXPR
+        NULL_EXPR,
     } NodeType;
 
   protected:
@@ -790,6 +790,26 @@ class BitNotExpr : public Expr {
   public:
     Expr *e;
 };
+
+/* Node representing a function call operation.
+ *
+ * SERIALIZED FORM:
+ *   (IDENTIFIER (EXPRLIST))
+ */
+class CallExpr : public Expr {
+  public:
+    CallExpr(std::string n, ExprList *elist, Location *l);
+    
+    virtual void accept(Visitor *);
+    virtual void dumpTo(std::ostream &);
+
+  public:
+    std::string ident;
+    ExprList *args;
+
+    symb::Function *ATTR(sym); // for tac generation
+};
+
 extern bool print_decorated_ast;
 } // namespace ast
 } // namespace mind

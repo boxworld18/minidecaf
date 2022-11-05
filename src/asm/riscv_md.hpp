@@ -124,7 +124,12 @@ struct RiscvInstr : public Instr {
         SLEQ,
         SGEQ,
         LAND,
-        LOR
+        LOR,
+
+        // Step9
+        PUSH,
+        POP,
+        CALL
 
     } op_code; // operation code
 
@@ -182,6 +187,14 @@ class RiscvDesc : public MachineDesc {
     // Step5
     // translates a Assign TAC into assembly instructions
     void emitAssignTac(RiscvInstr::OpCode, tac::Tac *);
+
+    // Step9
+    // translates a Call TAC into assembly instructions
+    void emitCallTac(tac::Tac *);
+    // translates a Push TAC into assembly instructions
+    void emitPushTac(tac::Tac *);
+    // translates a Pop TAC into assembly instructions
+    void emitPopTac(tac::Tac *);
     
     // outputs an instruction
     void emit(std::string, const char *, const char *);

@@ -85,6 +85,37 @@ void Translation::visit(ast::FuncDefn *f) {
     tr->endFunc();
 }
 
+/* Step9 begin */
+
+/* Translating an ast::CallExpr node.
+ *
+ */
+void Translation::visit(ast::CallExpr *s) {
+    Function *fun = s->ATTR(sym);
+    // Temp t = tr->getNewTempI4();
+
+    // push parameters
+    for (auto it = s->args->begin(); it != s->args->end(); ++it) {
+        (*it)->accept(this);
+        tr->genPush((*it)->ATTR(val));
+    }
+
+    // call function
+    Temp t = tr->genCall(fun->getEntryLabel());
+
+    // pop parameters
+    for (auto it = s->args->begin(); it != s->args->end(); ++it)
+        tr->genPop();
+
+    // restore registers
+    // tr->genAssign(ret, );
+
+    s->ATTR(val) = t;
+
+}
+
+/* Step9 end */
+
 /* Translating an ast::AssignStmt node.
  *
  * NOTE:

@@ -548,6 +548,24 @@ Tac *Tac::Pop(Temp dest) { // dest may be NULL
     return t;
 }
 
+/* Creates a Call tac.
+ *
+ * NOTE:
+ *   call address
+ * PARAMETERS:
+ *   src  - destination address
+ *   dest - return value
+ * RETURNS:
+ *   a Call tac
+ */
+Tac *Tac::Call(Temp dest, Label src) {
+    Tac *t = allocateNewTac(Tac::CALL);
+    t->op0.var = dest;
+    t->op1.label = src;
+    src->target = true;
+    return t;
+}
+
 /* Creates a Return tac.
  *
  * NOTE:
@@ -726,6 +744,10 @@ void Tac::dump(std::ostream &os) {
 
     case JZERO:
         os << "    if (" << op1.var << " == 0) jump " << op0.label;
+        break;
+
+    case CALL:
+        os << "    call   " << op0.label;
         break;
 
     case PUSH:

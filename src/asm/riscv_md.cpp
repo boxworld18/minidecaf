@@ -287,6 +287,18 @@ void RiscvDesc::emitTac(Tac *t) {
     case Tac::ASSIGN:
         emitAssignTac(RiscvInstr::MV, t);
         break;
+    
+    case Tac::PUSH:
+        emitPushTac(t);
+        break;
+
+    case Tac::CALL:
+        emitCallTac(t);
+        break;
+    
+    case Tac::POP:
+        emitPopTac(t);
+        break;
 
     default:
         mind_assert(false); // should not appear inside a basic block
@@ -376,7 +388,8 @@ void RiscvDesc::emitBinaryTac(RiscvInstr::OpCode op, Tac *t) {
     }
 }
 
-/* Step5 Begins
+/* Step5 begin */
+
 /* Translates a Assign TAC into Riscv instructions.
  *
  * PARAMETERS:
@@ -392,7 +405,60 @@ void RiscvDesc::emitAssignTac(RiscvInstr::OpCode op, Tac *t) {
 
     addInstr(op, _reg[r0], _reg[r1], NULL, 0, EMPTY_STR, NULL);
 }
-// Step5 ended
+
+/* Step5 end */
+
+/* Step9 begin */
+
+/* Translates a Push TAC into Riscv instructions.
+ *
+ * PARAMETERS:
+ *   t     - the Push TAC
+ */
+void RiscvDesc::emitPushTac(Tac *t) {
+    // eliminates useless assignments
+    if (!t->LiveOut->contains(t->op0.var))
+        return;
+
+    // int r1 = getRegForRead(t->op1.var, 0, t->LiveOut);
+    // int r0 = getRegForWrite(t->op0.var, r1, 0, t->LiveOut);
+
+    // addInstr(op, _reg[r0], _reg[r1], NULL, 0, EMPTY_STR, NULL);
+}
+
+/* Translates a Pop TAC into Riscv instructions.
+ *
+ * PARAMETERS:
+ *   t     - the Pop TAC
+ */
+void RiscvDesc::emitPopTac(Tac *t) {
+    // eliminates useless assignments
+    if (!t->LiveOut->contains(t->op0.var))
+        return;
+
+    // int r1 = getRegForRead(t->op1.var, 0, t->LiveOut);
+    // int r0 = getRegForWrite(t->op0.var, r1, 0, t->LiveOut);
+
+    // addInstr(op, _reg[r0], _reg[r1], NULL, 0, EMPTY_STR, NULL);
+}
+
+/* Translates a Call TAC into Riscv instructions.
+ *
+ * PARAMETERS:
+ *   t     - the Call TAC
+ */
+void RiscvDesc::emitCallTac(Tac *t) {
+    // eliminates useless assignments
+    if (!t->LiveOut->contains(t->op0.var))
+        return;
+
+    // int r1 = getRegForRead(t->op1.var, 0, t->LiveOut);
+    // int r0 = getRegForWrite(t->op0.var, r1, 0, t->LiveOut);
+
+    // addInstr(op, _reg[r0], _reg[r1], NULL, 0, EMPTY_STR, NULL);
+}
+
+/* Step9 end*/
 
 /* Outputs a single instruction line.
  *
