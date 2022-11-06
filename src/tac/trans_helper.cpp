@@ -411,6 +411,7 @@ Temp TransHelper::genPop(void) {
  */
 Temp TransHelper::genCall(Label dest) {
     Temp c = getNewTempI4();
+    chainUp(memoOf(current));
     chainUp(Tac::Call(c, dest)); 
     return c;
 }

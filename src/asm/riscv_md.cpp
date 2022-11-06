@@ -285,19 +285,19 @@ void RiscvDesc::emitTac(Tac *t) {
         break;
 
     case Tac::ASSIGN:
-        emitAssignTac(RiscvInstr::MV, t);
+        emitAssignTac(RiscvInstr::MOVE, t);
         break;
     
     case Tac::PUSH:
         emitPushTac(t);
         break;
 
-    case Tac::CALL:
-        emitCallTac(t);
-        break;
-    
     case Tac::POP:
         emitPopTac(t);
+        break;
+
+    case Tac::CALL:
+        emitCallTac(t);
         break;
 
     default:
@@ -416,14 +416,10 @@ void RiscvDesc::emitAssignTac(RiscvInstr::OpCode op, Tac *t) {
  *   t     - the Push TAC
  */
 void RiscvDesc::emitPushTac(Tac *t) {
-    // eliminates useless assignments
-    if (!t->LiveOut->contains(t->op0.var))
-        return;
-
-    // int r1 = getRegForRead(t->op1.var, 0, t->LiveOut);
-    // int r0 = getRegForWrite(t->op0.var, r1, 0, t->LiveOut);
-
-    // addInstr(op, _reg[r0], _reg[r1], NULL, 0, EMPTY_STR, NULL);
+    params.push_back(t);
+    // int r = getRegForRead(t->op0.var, 0, t->LiveOut);
+    // addInstr(RiscvInstr::ADDI, _reg[RiscvReg::SP], _reg[RiscvReg::SP], NULL, -4, EMPTY_STR, NULL);
+    // addInstr(RiscvInstr::SW, _reg[r], _reg[RiscvReg::SP], NULL, -4, EMPTY_STR, NULL);
 }
 
 /* Translates a Pop TAC into Riscv instructions.
@@ -432,14 +428,9 @@ void RiscvDesc::emitPushTac(Tac *t) {
  *   t     - the Pop TAC
  */
 void RiscvDesc::emitPopTac(Tac *t) {
-    // eliminates useless assignments
-    if (!t->LiveOut->contains(t->op0.var))
-        return;
-
-    // int r1 = getRegForRead(t->op1.var, 0, t->LiveOut);
-    // int r0 = getRegForWrite(t->op0.var, r1, 0, t->LiveOut);
-
-    // addInstr(op, _reg[r0], _reg[r1], NULL, 0, EMPTY_STR, NULL);
+    // int r = getRegForWrite(t->op0.var, 0, 0, t->LiveOut);
+    // addInstr(RiscvInstr::LW, _reg[r], _reg[RiscvReg::SP], NULL, 0, EMPTY_STR, NULL);
+    // addInstr(RiscvInstr::ADDI, _reg[RiscvReg::SP], _reg[RiscvReg::SP], NULL, 4, EMPTY_STR, NULL);
 }
 
 /* Translates a Call TAC into Riscv instructions.
@@ -452,10 +443,27 @@ void RiscvDesc::emitCallTac(Tac *t) {
     if (!t->LiveOut->contains(t->op0.var))
         return;
 
-    // int r1 = getRegForRead(t->op1.var, 0, t->LiveOut);
-    // int r0 = getRegForWrite(t->op0.var, r1, 0, t->LiveOut);
+    for (std::size_t i = 0; i < params.size(); i++) {
+        if (i < 8) {
+            params[i]->op0.var->is_offset_fixed = true;
+            passParamReg(params[i], i);
+        } else {
+            int r = getRegForRead(params[i]->op0.var, 0, t->LiveOut);
+            addInstr(RiscvInstr::ADDI, _reg[RiscvReg::SP], _reg[RiscvReg::SP], NULL, -4, EMPTY_STR, NULL);
+            addInstr(RiscvInstr::SW, _reg[r], _reg[RiscvReg::SP], NULL, -4, EMPTY_STR, NULL);
+        }
+    }
 
-    // addInstr(op, _reg[r0], _reg[r1], NULL, 0, EMPTY_STR, NULL);
+    // save caller-saved registers
+    spillDirtyRegs(t->LiveOut);
+
+
+    addInstr(RiscvInstr::CALL, NULL, NULL, NULL, 0, t->op1.label->str_form, NULL);
+    
+    int r0 = getRegForWrite(t->op0.var, 0, 0, t->LiveOut);
+    addInstr(RiscvInstr::MOVE, _reg[r0], _reg[RiscvReg::A0], NULL, 0, EMPTY_STR, "save return value");
+
+    params.clear();
 }
 
 /* Step9 end*/
@@ -721,13 +729,17 @@ void RiscvDesc::emitInstr(RiscvInstr *i) {
 
     /* Step2 ended */
 
-    /* Step5 begins */
+    /* Step9 begin */
 
-    case RiscvInstr::MV:
-        oss << "mv" << i->r0->name << ", " << i->r1->name;
+    case RiscvInstr::CALL:
+        oss << "call" << i->l;
         break;
 
-    /* Step5 ended */
+    case RiscvInstr::ADDI:
+        oss << "addi" << i->r0->name << ", " << i->r1->name << ", " << i->i;
+        break;
+
+    /* Step9 end */
 
     default:
         mind_assert(false); // other instructions not supported

@@ -7,6 +7,7 @@
 #define __MIND_RISCVMD__
 
 #include "3rdparty/set.hpp"
+#include "3rdparty/vector.hpp"
 #include "asm/mach_desc.hpp"
 #include "asm/riscv_frame_manager.hpp"
 #include "define.hpp"
@@ -113,9 +114,6 @@ struct RiscvInstr : public Instr {
         OR,
         XORI,
 
-        // Step5
-        MV,
-
         // Local pseudo instructions
         
         // Step4
@@ -129,7 +127,8 @@ struct RiscvInstr : public Instr {
         // Step9
         PUSH,
         POP,
-        CALL
+        CALL,
+        ADDI
 
     } op_code; // operation code
 
@@ -189,6 +188,7 @@ class RiscvDesc : public MachineDesc {
     void emitAssignTac(RiscvInstr::OpCode, tac::Tac *);
 
     // Step9
+    util::Vector<tac::Tac *> params;
     // translates a Call TAC into assembly instructions
     void emitCallTac(tac::Tac *);
     // translates a Push TAC into assembly instructions

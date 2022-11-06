@@ -75,7 +75,6 @@ void Translation::visit(ast::FuncDefn *f) {
 
     // You may process params here, i.e use reg or stack to pass parameters
 
-
     // translates statement by statement
     for (auto it = f->stmts->begin(); it != f->stmts->end(); ++it)
         (*it)->accept(this);
@@ -92,25 +91,22 @@ void Translation::visit(ast::FuncDefn *f) {
  */
 void Translation::visit(ast::CallExpr *s) {
     Function *fun = s->ATTR(sym);
-    // Temp t = tr->getNewTempI4();
+
+    // accept parameters
+    for (auto it = s->args->begin(); it != s->args->end(); ++it) 
+        (*it)->accept(this);
 
     // push parameters
-    for (auto it = s->args->begin(); it != s->args->end(); ++it) {
-        (*it)->accept(this);
+    for (auto it = s->args->begin(); it != s->args->end(); ++it)
         tr->genPush((*it)->ATTR(val));
-    }
 
     // call function
     Temp t = tr->genCall(fun->getEntryLabel());
+    s->ATTR(val) = t;
 
     // pop parameters
     for (auto it = s->args->begin(); it != s->args->end(); ++it)
         tr->genPop();
-
-    // restore registers
-    // tr->genAssign(ret, );
-
-    s->ATTR(val) = t;
 
 }
 
