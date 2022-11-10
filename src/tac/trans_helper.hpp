@@ -74,6 +74,11 @@ class TransHelper {
     void genMarkLabel(Label);
     void genMemo(const char *);
 
+    // Global variables
+    Temp genLoad(Temp, int);
+    void genStore(Temp, Temp, int);
+    Temp genLoadSymbol(std::string);
+
     // gets the entire Piece list
     Piece *getPiece();
 

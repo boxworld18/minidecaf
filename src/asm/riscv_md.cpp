@@ -131,8 +131,27 @@ void RiscvDesc::emitPieces(scope::GlobalScope *gscope, Piece *ps,
         emit(EMPTY_STR, ".text", NULL);
         emit(EMPTY_STR, ".globl main", NULL);
         emit(EMPTY_STR, ".align 2", NULL);
+
+        // data segment preamble
+        for (auto it = gscope->begin(); it != gscope->end(); it++) {
+            if ((*it)->isVariable()) {
+                mind::symb::Variable *var= (mind::symb::Variable *)*it;
+                std::string name = var->getName();
+                emit(EMPTY_STR, ".data", NULL);
+                emit(EMPTY_STR, ".align 2", NULL);
+                emit(EMPTY_STR, (".globl " + var->getName()).c_str(), NULL);
+                emit(name, NULL, NULL);
+                std::ostringstream oss;
+                oss << ".word " << var->getGlobalInit();
+                emit(EMPTY_STR, oss.str().c_str(), NULL);
+
+            }
+        }
+
     }
     // translates node by node
+    
+
 
     while (NULL != ps) {
         switch (ps->kind) {
@@ -319,6 +338,18 @@ void RiscvDesc::emitTac(Tac *t) {
         emitCallTac(t);
         break;
 
+    case Tac::LOAD:
+        emitLoadTac(t);
+        break;
+    
+    case Tac::STORE:
+        emitStoreTac(t);
+        break;
+
+    case Tac::LOAD_SYMBOL:
+        emitLoadSymbolTac(t);
+        break;
+
     default:
         mind_assert(false); // should not appear inside a basic block
     }
@@ -473,7 +504,7 @@ void RiscvDesc::emitCallTac(Tac *t) {
         addInstr(RiscvInstr::SW, _reg[r], _reg[RiscvReg::SP], NULL, 0, EMPTY_STR, NULL);
     }    
 
-    for (int i = 0; i < 8; i++) {
+    for (size_t i = 0; i < 8; i++) {
         if (i >= params.size()) break;
         passParamReg(params[i], i); 
     }
@@ -491,7 +522,54 @@ void RiscvDesc::emitCallTac(Tac *t) {
     params.clear();
 }
 
-/* Step9 end*/
+/* Step9 end */
+
+/* Step10 begin */
+
+/* Translates a LOAD TAC into Riscv instructions.
+ *
+ * PARAMETERS:
+ *   t     - the Load TAC
+ */
+void RiscvDesc::emitLoadTac(Tac *t) {
+    // eliminates useless assignments
+    if (!t->LiveOut->contains(t->op0.var))
+        return;
+
+    int r1 = getRegForRead(t->op1.var, 0, t->LiveOut);
+    int r0 = getRegForWrite(t->op0.var, r1, 0, t->LiveOut);
+
+    addInstr(RiscvInstr::LW, _reg[r0], _reg[r1], NULL, t->op1.offset, EMPTY_STR, NULL);
+}
+
+/* Translates a STORE TAC into Riscv instructions.
+ *
+ * PARAMETERS:
+ *   t     - the Store TAC
+ */
+void RiscvDesc::emitStoreTac(Tac *t) {
+    // eliminates useless assignments
+    int r0 = getRegForRead(t->op0.var, 0, t->LiveOut);
+    int r1 = getRegForRead(t->op1.var, r0, t->LiveOut);
+    
+    addInstr(RiscvInstr::SW, _reg[r0], _reg[r1], NULL, t->op1.offset, EMPTY_STR, NULL);
+}
+
+/* Translates a LOAD_SYMBOL TAC into Riscv instructions.
+ *
+ * PARAMETERS:
+ *   t     - the LoadSymbol TAC
+ */
+void RiscvDesc::emitLoadSymbolTac(Tac *t) {
+    // eliminates useless assignments
+    if (!t->LiveOut->contains(t->op0.var))
+        return;
+
+    int r0 = getRegForWrite(t->op0.var, 0, 0, t->LiveOut);
+    addInstr(RiscvInstr::LA, _reg[r0], NULL, NULL, 0, t->op1.name, NULL);
+}
+
+/* Step10 end */
 
 /* Outputs a single instruction line.
  *
@@ -773,6 +851,14 @@ void RiscvDesc::emitInstr(RiscvInstr *i) {
         break;
 
     /* Step9 end */
+
+    /* Step10 start */
+
+    case RiscvInstr::LA:
+        oss << "la" << i->r0->name << ", " << i->l;
+        break;
+
+    /* Step10 end */
 
     default:
         mind_assert(false); // other instructions not supported

@@ -518,3 +518,43 @@ void TransHelper::genMemo(const char *comment) { chainUp(Tac::Memo(comment)); }
  *   the Piece list (representing as a single linked list)
  */
 Piece *TransHelper::getPiece(void) { return head.next; }
+
+/* Appends a Load tac node to the current list.
+ *
+ * PARAMETERS:
+ *   base   - base addr
+ *   offset - offset
+ * RETURNS:
+ *   the temporary containing the data at offset(base)
+ */
+Temp TransHelper::genLoad(Temp base, int offset) {
+    Temp res = getNewTempI4();
+    chainUp(Tac::Load(res, base, offset));
+    return res;
+}
+
+/* Appends a Store tac node to the current list.
+ *
+ * PARAMETERS:
+ *   src    - the Temp to store
+ *   base   - base addr
+ *   offset - offset
+ * RETURNS:
+ *   the temporary containing the data at offset(base)
+ */
+void TransHelper::genStore(Temp src, Temp base, int offset) {
+    chainUp(Tac::Store(src, base, offset));
+}
+
+/* Appends a LoadSymbol tac node to the current list.
+ *
+ * PARAMETERS:
+ *   name   - the name of the variable
+ * RETURNS:
+ *   the temporary containing the address of the variable
+ */
+Temp TransHelper::genLoadSymbol(std::string name) {
+    Temp addr = getNewTempI4();
+    chainUp(Tac::LoadSymbol(addr, name));
+    return addr;
+}

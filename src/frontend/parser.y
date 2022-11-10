@@ -128,7 +128,13 @@ Program     : FoDList
             ;
 FoDList     : FuncDefn 
                 { $$ = new ast::Program($1,POS(@1)); }
+            | VarDecl
+                { $$ = new ast::Program($1,POS(@1)); }
             | FoDList FuncDefn{
+                { $1->func_and_globals->append($2);
+                  $$ = $1; }
+                }
+            | FoDList VarDecl{
                 { $1->func_and_globals->append($2);
                   $$ = $1; }
                 }

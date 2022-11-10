@@ -138,7 +138,16 @@ void Translation::visit(ast::AssignExpr *s) {
     switch (s->left->ATTR(lv_kind)) {
         case ast::Lvalue::SIMPLE_VAR: {
             const auto &sym = ((ast::VarRef*)s->left)->ATTR(sym);
-            s->ATTR(val) = sym->getTemp();
+            if (sym->isGlobalVar()) {
+                // Global variables
+                Temp t = tr->genLoadSymbol(sym->getName());
+                tr->genStore(s->e->ATTR(val), t, 0);
+                s->ATTR(val) = s->e->ATTR(val);
+            } else {
+                // Local variables
+                s->ATTR(val) = sym->getTemp();
+                tr->genAssign(s->ATTR(val), s->e->ATTR(val));
+            }
             break;
         }
         case ast::Lvalue::ARRAY_ELE: {
@@ -482,7 +491,14 @@ void Translation::visit(ast::LvalueExpr *e) {
     switch (e->lvalue->ATTR(lv_kind)) {
         case ast::Lvalue::SIMPLE_VAR: {
             const auto &sym = ((ast::VarRef*)e->lvalue)->ATTR(sym);
-            e->ATTR(val) = sym->getTemp();
+            if (sym->isGlobalVar()) {
+                // Global variables
+                Temp t = tr->genLoadSymbol(sym->getName());
+                e->ATTR(val) = tr->genLoad(t, 0);
+            } else {
+                // Local variables
+                e->ATTR(val) = sym->getTemp();
+            }
             break;
         }
         case ast::Lvalue::ARRAY_ELE: {

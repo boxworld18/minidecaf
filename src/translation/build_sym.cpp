@@ -266,7 +266,14 @@ void SemPass1::visit(ast::VarDecl *vdecl) {
         vdecl->init->accept(this);
 
     // 4. Special processing for global variables
-    
+    if (v->isGlobalVar()) {
+        if (vdecl->init != NULL) {
+            if (vdecl->init->getKind() == ast::ASTNode::INT_CONST)
+                v->setGlobalInit(((ast::IntConst *)vdecl->init)->value);
+            else
+                issue(vdecl->getLocation(), new SyntaxError("Global variable must be initialized with an integer constant"));
+        }
+    }
     
     // 5. Tag the symbol to `vdecl->ATTR(sym)`
     vdecl->ATTR(sym) = v;

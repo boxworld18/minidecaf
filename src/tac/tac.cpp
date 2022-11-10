@@ -601,6 +601,72 @@ Tac *Tac::Mark(Label label) {
     return t;
 }
 
+/* Creates a Load tac.
+ *
+ * NOTE:
+ *   load from memory
+ * PARAMETERS:
+ *   dest - result
+ *   base - base addr
+ *   offset - offset
+ * RETURNS:
+ *   a Load tac
+ */
+Tac *Tac::Load(Temp dest, Temp base, int offset) {
+    REQUIRE_I4(dest);
+    REQUIRE_I4(base);
+
+    Tac *t = allocateNewTac(Tac::LOAD);
+    t->op0.var = dest;
+    t->op1.var = base;
+    t->op1.offset = offset;
+
+    return t;
+}
+
+/* Creates a Store tac.
+ *
+ * NOTE:
+ *   store to memory
+ * PARAMETERS:
+ *   src  - source
+ *   base - base addr
+ *   offset - offset
+ * RETURNS:
+ *   a Load tac
+ */
+Tac *Tac::Store(Temp src, Temp base, int offset) {
+    REQUIRE_I4(src);
+    REQUIRE_I4(base);
+
+    Tac *t = allocateNewTac(Tac::STORE);
+    t->op0.var = src;
+    t->op1.var = base;
+    t->op1.offset = offset;
+    return t;
+}
+
+/* Creates a LoadSymbol tac.
+ *
+ * NOTE:
+ *   load symbol position of memory
+ * PARAMETERS:
+ *   dest - result
+ *   src  - source
+ *   offset - offset of the source
+ * RETURNS:
+ *   a Load tac
+ */
+Tac *Tac::LoadSymbol(Temp dest, std::string name) {
+    REQUIRE_I4(dest);
+
+    Tac *t = allocateNewTac(Tac::LOAD_SYMBOL);
+    t->op0.var = dest;
+    t->op1.name = name;
+
+    return t;
+}
+
 /* Outputs a temporary variable.
  *
  * PARAMETERS:
@@ -767,6 +833,18 @@ void Tac::dump(std::ostream &os) {
 
     case LOAD_IMM4:
         os << "    " << op0.var << " <- " << op1.ival;
+        break;
+    
+    case LOAD:
+        os << "    " << op0.var << " <- load " << op1.offset << "(" << op1.var << ")";
+        break;
+
+    case STORE:
+        os << "    store " << op0.var << " in " << op1.offset << "(" << op1.var << ")";
+        break;
+    
+    case LOAD_SYMBOL:
+        os << "    " << op0.var << " <- load_symbol " << op1.name;
         break;
 
     default:

@@ -114,9 +114,6 @@ struct RiscvInstr : public Instr {
         OR,
         XORI,
 
-        // Local pseudo instructions
-        
-        // Step4
         SEQ,
         SNE,
         SLEQ,
@@ -128,7 +125,10 @@ struct RiscvInstr : public Instr {
         PUSH,
         POP,
         CALL,
-        ADDI
+        ADDI,
+
+        // Step10
+        LA
 
     } op_code; // operation code
 
@@ -197,6 +197,14 @@ class RiscvDesc : public MachineDesc {
     void emitPushTac(tac::Tac *);
     // translates a Pop TAC into assembly instructions
     void emitPopTac(tac::Tac *);
+
+    // Step10
+    // translates a LoadSymbol TAC into assembly instructions
+    void emitLoadSymbolTac(tac::Tac *);
+    // translates a Load TAC into assembly instructions
+    void emitLoadTac(tac::Tac *);
+    // translates a Store TAC into assembly instructions
+    void emitStoreTac(tac::Tac *);
     
     // outputs an instruction
     void emit(std::string, const char *, const char *);
