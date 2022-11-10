@@ -85,24 +85,75 @@ void SemPass1::visit(ast::FuncDefn *fdef) {
     fdef->ret_type->accept(this);
     Type *t = fdef->ret_type->ATTR(type);
 
-    Function *f = new Function(fdef->name, t, fdef->getLocation());
-    fdef->ATTR(sym) = f;
+    Function *f;
+    // Function *f = new Function(fdef->name, t, fdef->getLocation());
+    // fdef->ATTR(sym) = f;
 
     // checks the Declaration Conflict Error of Case 1 (but don't check Case
     // 2,3). if DeclConflictError occurs, we don't put the symbol into the
     // symbol table
     Symbol *sym = scopes->lookup(fdef->name, fdef->getLocation(), false);
-    if (NULL != sym)
-        issue(fdef->getLocation(), new DeclConflictError(fdef->name, sym));
-    else
+
+    if (NULL != sym) {
+        f = (Function *) sym; 
+        // issue(fdef->getLocation(), new DeclConflictError(fdef->name, sym));
+    } else {
+        f = new Function(fdef->name, t, fdef->getLocation());
         scopes->declare(f);
+    }
+
+    fdef->ATTR(sym) = f;  
 
     // opens function scope
-    scopes->open(f->getAssociatedScope());
+    FuncScope *my_scope = f->getAssociatedScope();
+    assert(my_scope != NULL);
+
+    // param list
+    if (my_scope->_first) {
+        // first time declare
+        // scopes->open(my_scope);
+
+        // adds the parameters
+        for (auto it = fdef->formals->begin(); it != fdef->formals->end(); ++it) {
+            my_scope->_params.push_back((*it)->type);    
+            // (*it)->accept(this);
+            // f->appendParameter((*it)->ATTR(sym));
+        }
+
+        // scopes->close();
+        my_scope->_first = false;
+
+    } else {
+        // redeclare or implementation
+        auto plist = my_scope->_params;
+        
+        // check length
+        if (plist.size() != fdef->formals->length()) {
+            issue(fdef->getLocation(), new DeclConflictError(fdef->name, sym));
+            return;
+        }
+
+        // check each parameter
+        auto it = fdef->formals->begin();
+        for (size_t i = 0; i < plist.size(); i++) {
+            if (plist[i]->getKind() != (*it)->type->getKind()) {
+                issue(fdef->getLocation(), new DeclConflictError(fdef->name, sym));
+                return;
+            }
+            it++;
+        }
+    }
+
+    if (fdef->forward_decl) return;
+
+    // Implementation
+    scopes->open(my_scope);
 
     // adds the parameters
-    for (ast::VarList::iterator it = fdef->formals->begin();
-         it != fdef->formals->end(); ++it) {
+    for (auto it = fdef->formals->begin(); it != fdef->formals->end(); ++it) {
+        // Symbol *sym = scopes->lookup((*it)->name, (*it)->getLocation(), false);
+        // if (NULL != sym) 
+        //     my_scope->cancel(sym);
         (*it)->accept(this);
         f->appendParameter((*it)->ATTR(sym));
     }

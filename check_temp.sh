@@ -1,5 +1,5 @@
 cd src/
-make CXX=g++-8 CC=gcc-8
+make CXX=g++-8 CC=gcc-8 
 ./mind -l 3 ../test.c
 ./mind -l 4 ../test.c
 ./mind -l 5 ../test.c

@@ -87,6 +87,21 @@ RiscvDesc::RiscvDesc(void) {
     _reg[RiscvReg::A6] = new RiscvReg("a6", true); // argument
     _reg[RiscvReg::A7] = new RiscvReg("a7", true); // argument
 
+    _callee_save_reg[0] = _reg[9];
+    _callee_save_reg[1] = _reg[18];
+    _callee_save_reg[2] = _reg[19];
+    _callee_save_reg[3] = _reg[20];
+    _callee_save_reg[4] = _reg[21];
+    _callee_save_reg[5] = _reg[22];
+    _callee_save_reg[6] = _reg[23];
+    _callee_save_reg[7] = _reg[24];
+    _callee_save_reg[8] = _reg[25];
+    _callee_save_reg[9] = _reg[26];
+    _callee_save_reg[10] = _reg[27];
+
+    params.clear();
+    pop_param_num = 0;
+
     _lastUsedReg = 0;
     _label_counter = 0;
 }
@@ -191,6 +206,10 @@ RiscvInstr *RiscvDesc::prepareSingleChain(BasicBlock *b, FlowGraph *g) {
                  0, EMPTY_STR, NULL);
         addInstr(RiscvInstr::LW, _reg[RiscvReg::RA], _reg[RiscvReg::FP], NULL,
                  -4, EMPTY_STR, NULL);
+        // for (int i = 0; i < 11; i++) {
+        //     addInstr(RiscvInstr::LW, _callee_save_reg[i], _reg[RiscvReg::FP],
+        //              NULL, -12 - i * 4, EMPTY_STR, NULL);
+        // }
         addInstr(RiscvInstr::LW, _reg[RiscvReg::FP], _reg[RiscvReg::FP], NULL,
                  -8, EMPTY_STR, NULL);
         addInstr(RiscvInstr::RET, NULL, NULL, NULL, 0, EMPTY_STR, NULL);
@@ -428,9 +447,13 @@ void RiscvDesc::emitPushTac(Tac *t) {
  *   t     - the Pop TAC
  */
 void RiscvDesc::emitPopTac(Tac *t) {
-    // int r = getRegForWrite(t->op0.var, 0, 0, t->LiveOut);
-    // addInstr(RiscvInstr::LW, _reg[r], _reg[RiscvReg::SP], NULL, 0, EMPTY_STR, NULL);
-    // addInstr(RiscvInstr::ADDI, _reg[RiscvReg::SP], _reg[RiscvReg::SP], NULL, 4, EMPTY_STR, NULL);
+    if (pop_param_num < 8) {
+        getParamReg(t, pop_param_num);
+    } else {
+        int r = getRegForWrite(t->op0.var, 0, 0, t->LiveOut);
+        addInstr(RiscvInstr::LW, _reg[r], _reg[RiscvReg::FP], NULL, 4 * (pop_param_num - 7), EMPTY_STR, NULL);
+    }
+    pop_param_num++;
 }
 
 /* Translates a Call TAC into Riscv instructions.
@@ -443,22 +466,24 @@ void RiscvDesc::emitCallTac(Tac *t) {
     if (!t->LiveOut->contains(t->op0.var))
         return;
 
-    for (std::size_t i = 0; i < params.size(); i++) {
-        if (i < 8) {
-            params[i]->op0.var->is_offset_fixed = true;
-            passParamReg(params[i], i);
-        } else {
-            int r = getRegForRead(params[i]->op0.var, 0, t->LiveOut);
-            addInstr(RiscvInstr::ADDI, _reg[RiscvReg::SP], _reg[RiscvReg::SP], NULL, -4, EMPTY_STR, NULL);
-            addInstr(RiscvInstr::SW, _reg[r], _reg[RiscvReg::SP], NULL, -4, EMPTY_STR, NULL);
-        }
+    // save param
+    for (int i = params.size() - 1; i >= 8; i--) {
+        int r = getRegForRead(params[i]->op0.var, 0, t->LiveOut);
+        addInstr(RiscvInstr::ADDI, _reg[RiscvReg::SP], _reg[RiscvReg::SP], NULL, -4, EMPTY_STR, NULL);
+        addInstr(RiscvInstr::SW, _reg[r], _reg[RiscvReg::SP], NULL, 0, EMPTY_STR, NULL);
+    }    
+
+    for (int i = 0; i < 8; i++) {
+        if (i >= params.size()) break;
+        passParamReg(params[i], i); 
     }
 
     // save caller-saved registers
     spillDirtyRegs(t->LiveOut);
 
-
-    addInstr(RiscvInstr::CALL, NULL, NULL, NULL, 0, t->op1.label->str_form, NULL);
+    std::ostringstream oss;
+    oss << t->op1.label;
+    addInstr(RiscvInstr::CALL, NULL, NULL, NULL, 0, oss.str().c_str(), NULL);
     
     int r0 = getRegForWrite(t->op0.var, 0, 0, t->LiveOut);
     addInstr(RiscvInstr::MOVE, _reg[r0], _reg[RiscvReg::A0], NULL, 0, EMPTY_STR, "save return value");
@@ -512,12 +537,11 @@ void RiscvDesc::passParamReg(Tac *t, int cnt) {
         oss << "load " << v << " from (" << base->name
             << (v->offset < 0 ? "" : "+") << v->offset << ") into "
             << _reg[RiscvReg::A0 + cnt]->name;
-        addInstr(RiscvInstr::LW, _reg[RiscvReg::A0 + cnt], base, NULL, v->offset, EMPTY_STR,
+        addInstr(RiscvInstr::LW, _reg[RiscvReg::A0 + cnt], base, NULL, v->offset, EMPTY_STR, //NULL);
                     oss.str().c_str());
     } else {
         oss << "copy " << _reg[i]->name << " to " << _reg[RiscvReg::A0 + cnt]->name;
-        addInstr(RiscvInstr::MOVE, _reg[RiscvReg::A0 + cnt], _reg[i], NULL, 0,
-                    EMPTY_STR, oss.str().c_str());
+        addInstr(RiscvInstr::MOVE, _reg[RiscvReg::A0 + cnt], _reg[i], NULL, 0, EMPTY_STR, NULL);
     }
 }
 
@@ -612,9 +636,18 @@ void RiscvDesc::emitProlog(Label entry_label, int frame_size) {
     emit(EMPTY_STR, "sw    ra, -4(sp)", NULL); // saves old frame pointer
     emit(EMPTY_STR, "sw    fp, -8(sp)", NULL); // saves return address
     // establishes new stack frame (new context)
-    emit(EMPTY_STR, "mv    fp, sp", NULL);
-    oss << "addi  sp, sp, -" << (frame_size + 2 * WORD_SIZE); // 2 WORD's for old $fp and $ra
+    emit(EMPTY_STR, "mv    fp, sp", NULL); // sets new frame pointer
+    oss << "addi  sp, sp, -" << (frame_size + 14 * WORD_SIZE); // 12 + 2 WORD's for old $fp and $ra
     emit(EMPTY_STR, oss.str().c_str(), NULL);
+    oss.str("");
+    // callee saved register
+    // for (int i = 0; i < 11; i++) {
+    //     oss << "sw    " << _callee_save_reg[i]->name << ", " << (i + 1) * WORD_SIZE << "(sp)";
+    //     emit(EMPTY_STR, oss.str().c_str(), NULL);
+    //     oss.str("");
+    // }
+
+    pop_param_num = 0;
 }
 
 /* Outputs a single instruction.

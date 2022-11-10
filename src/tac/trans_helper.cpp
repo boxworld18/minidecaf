@@ -128,6 +128,21 @@ Label TransHelper::getNewEntryLabel(Function *fn) {
  */
 Tac *TransHelper::memoOf(Function *f) {
     std::ostringstream oss;
+
+    FuncScope *my_scope = f->getAssociatedScope();
+    // save registers infomation
+    for (auto it = my_scope->begin(); it != my_scope->end(); ++it) {
+        Symbol *s = *it;
+        if (s->getOrder() <= 7) continue;
+        if (s->isVariable()) {
+            Variable *v = (Variable *)s;
+            if (v->isParameter()) {
+                v->getTemp()->offset = v->offset;
+                v->getTemp()->is_offset_fixed = true;
+                oss << "\n    param " << v->getTemp() << ": " << v->offset;
+            }
+        }
+    }
     
     int length = oss.str().size();
     char *memo = new char[length + 1];
@@ -155,6 +170,9 @@ void TransHelper::startFunc(Function *f) {
     ptail->as.functy->entry = entry;
     current = f;
 
+    // update mem info
+    chainUp(memoOf(current));
+
     // generates entry label
     genMarkLabel(entry);
 }
@@ -168,7 +186,8 @@ void TransHelper::endFunc(void) {
     // does things automatically
     ptail->as.functy->code = tacs;
     tacs = tacs_tail = NULL;
-    current->attachFuncty(ptail->as.functy);
+    if (current->getFuncty() == NULL)
+        current->attachFuncty(ptail->as.functy);
     current = NULL;
 }
 
@@ -398,20 +417,19 @@ Temp TransHelper::genBNot(Temp src) {
  * RETURNS:
  *   the temporary containing the result of the newly poped value
  */
-Temp TransHelper::genPop(void) {
-    Temp c = getNewTempI4();
-    chainUp(Tac::Pop(c));
-    return c;
+Temp TransHelper::genPop(Temp dest) {
+    chainUp(Tac::Pop(dest));
+    return dest;
 }
 
 /* Appends a Call tac node to the current list.
  *
  * PARAMETERS:
  *   dest - destination label
+ *   num  - number of arguments
  */
 Temp TransHelper::genCall(Label dest) {
     Temp c = getNewTempI4();
-    chainUp(memoOf(current));
     chainUp(Tac::Call(c, dest)); 
     return c;
 }

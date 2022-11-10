@@ -13,6 +13,7 @@
 #define __MIND_SCOPE__
 
 #include "define.hpp"
+#include "3rdparty/vector.hpp"
 #include <unordered_map>
 
 #include <iostream>
@@ -113,6 +114,9 @@ class FuncScope : public Scope {
     symb::Function *owner;
 
   public:
+    bool _first;
+    // temp param list
+    util::Vector<ast::Type *> _params;
     // Constructor
     FuncScope(symb::Function *owner);
     // Gets the owner of this function scope

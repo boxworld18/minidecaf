@@ -55,32 +55,50 @@ void Translation::visit(ast::Program *p) {
  */
 void Translation::visit(ast::FuncDefn *f) {
     Function *fun = f->ATTR(sym);
+    assert(fun != NULL);
 
     // attaching function entry label
-    fun->attachEntryLabel(tr->getNewEntryLabel(fun));
+    if (NULL == fun->getEntryLabel())
+        fun->attachEntryLabel(tr->getNewEntryLabel(fun));
+
+    if (f->forward_decl) return;
 
     // arguments
     int order = 0;
     for (auto it = f->formals->begin(); it != f->formals->end(); ++it) {
         auto v = (*it)->ATTR(sym);
+        assert(v != NULL);
         v->setOrder(order++);
         v->attachTemp(tr->getNewTempI4());
     }
-
     fun->offset = fun->getOrder() * POINTER_SIZE;
-
+    
     RESET_OFFSET();
-
+    
+    // You may process params here, i.e use reg or stack to pass parameters
+    int cnt = 0;
+    for (auto it = f->formals->begin(); it != f->formals->end(); ++it) {
+        auto v = (*it)->ATTR(sym);
+        if (cnt >= 8) // use stack
+            v->offset = NEXT_OFFSET(v->getTemp()->size);
+        cnt++;
+    }
+    
     tr->startFunc(fun);
 
-    // You may process params here, i.e use reg or stack to pass parameters
-
+    cnt = 0;
+    for (auto it = f->formals->begin(); it != f->formals->end(); ++it) {
+        auto v = (*it)->ATTR(sym);
+        tr->genPop(v->getTemp());
+        if (++cnt >= 8) break;
+    }
+    
     // translates statement by statement
-    for (auto it = f->stmts->begin(); it != f->stmts->end(); ++it)
+    for (auto it = f->stmts->begin(); it != f->stmts->end(); ++it) 
         (*it)->accept(this);
-
+    
     tr->genReturn(tr->genLoadImm4(0)); // Return 0 by default
-
+    
     tr->endFunc();
 }
 
@@ -91,23 +109,19 @@ void Translation::visit(ast::FuncDefn *f) {
  */
 void Translation::visit(ast::CallExpr *s) {
     Function *fun = s->ATTR(sym);
+    assert(fun != NULL);
 
     // accept parameters
     for (auto it = s->args->begin(); it != s->args->end(); ++it) 
         (*it)->accept(this);
-
+    
     // push parameters
     for (auto it = s->args->begin(); it != s->args->end(); ++it)
         tr->genPush((*it)->ATTR(val));
-
+    
     // call function
     Temp t = tr->genCall(fun->getEntryLabel());
     s->ATTR(val) = t;
-
-    // pop parameters
-    for (auto it = s->args->begin(); it != s->args->end(); ++it)
-        tr->genPop();
-
 }
 
 /* Step9 end */
@@ -118,7 +132,6 @@ void Translation::visit(ast::CallExpr *s) {
  *   different kinds of Lvalue require different translation
  */
 void Translation::visit(ast::AssignExpr *s) {
-    // TODO
     s->left->accept(this);
     s->e->accept(this);
 

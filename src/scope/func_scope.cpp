@@ -23,7 +23,8 @@ using namespace mind::util;
  */
 FuncScope::FuncScope(Function *o) {
     mind_assert(NULL != o);
-
+    _params.clear();
+    _first = true;
     owner = o;
 }
 

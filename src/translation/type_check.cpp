@@ -412,10 +412,10 @@ void SemPass2::visit(ast::VarDecl *decl) {
         decl->init->accept(this);
 }
 
-/* Visits an ast::AssignStmt node.
+/* Visits an ast::AssignExpr node.
  *
  * PARAMETERS:
- *   e     - the ast::AssignStmt node
+ *   e     - the ast::AssignExpr node
  */
 void SemPass2::visit(ast::AssignExpr *s) {
     s->left->accept(this);
@@ -558,10 +558,10 @@ void SemPass2::visit(ast::CallExpr *e) {
         e->ATTR(type) = f->getResultType();
         e->ATTR(sym) = f;
 
-        scopes->open(f->getAssociatedScope());
-
-        // compare values amounts
-        if (f->getType()->numOfParameters() != e->args->length()) {
+        auto plist = f->getAssociatedScope()->_params;
+            
+        // check length
+        if (plist.size() != e->args->length()) {
             issue(e->getLocation(), new BadArgCountError(f));
         }
 
@@ -573,13 +573,11 @@ void SemPass2::visit(ast::CallExpr *e) {
         // compare arg type
         for (it = e->args->begin(); it != e->args->end(); ++it){
             (*it)->accept(this);
-            if (!(*it)->ATTR(type)->compatible(*type_it)) {
-                issue(e->getLocation(), new UnexpectedTypeError((*it)->ATTR(type), *type_it));
-                type_it ++;
-            }
+            // if (!(*it)->ATTR(type)->compatible(*type_it)) {
+            //     issue(e->getLocation(), new UnexpectedTypeError((*it)->ATTR(type), *type_it));
+            //     type_it ++;
+            // }
         }
-
-        scopes->close();
     }
 
     return;
@@ -593,7 +591,6 @@ void SemPass2::visit(ast::CallExpr *e) {
  */
 void SemPass2::visit(ast::ReturnStmt *s) {
     s->e->accept(this);
-
     if (!isErrorType(retType) && !s->e->ATTR(type)->compatible(retType)) {
         issue(s->e->getLocation(),
               new IncompatibleError(retType, s->e->ATTR(type)));
@@ -606,14 +603,35 @@ void SemPass2::visit(ast::ReturnStmt *s) {
  *   e     - the ast::FunDefn node
  */
 void SemPass2::visit(ast::FuncDefn *f) {
-    ast::StmtList::iterator it;
+    // Check Symbol
+    Symbol *s = scopes->lookup(f->name, f->getLocation());
+    if (NULL == s) {
+        issue(f->getLocation(), new SymbolNotFoundError(f->name));
+    } else if (!s->isFunction()) {
+        issue(f->getLocation(), new NotMethodError(s));
+    } else {
+        Function *func = (Function *)s;
 
-    retType = f->ret_type->ATTR(type);
+        if (f->ret_type->ATTR(type)->compatible(func->getResultType()) == false) {
+            issue(f->getLocation(), new IncompatibleError(func->getResultType(), f->ret_type->ATTR(type)));
+        }
 
-    scopes->open(f->ATTR(sym)->getAssociatedScope());
-    for (it = f->stmts->begin(); it != f->stmts->end(); ++it)
-        (*it)->accept(this);
-    scopes->close();
+        retType = f->ret_type->ATTR(type);
+
+        scopes->open(f->ATTR(sym)->getAssociatedScope());
+        for (auto it = f->stmts->begin(); it != f->stmts->end(); ++it)
+            (*it)->accept(this);
+        scopes->close();
+    }
+
+    // ast::StmtList::iterator it;
+
+    // retType = f->ret_type->ATTR(type);
+
+    // scopes->open(f->ATTR(sym)->getAssociatedScope());
+    // for (it = f->stmts->begin(); it != f->stmts->end(); ++it)
+    //     (*it)->accept(this);
+    // scopes->close();
 }
 
 /* Visits an ast::Program node.
@@ -637,3 +655,5 @@ void SemPass2::visit(ast::Program *p) {
 void MindCompiler::checkTypes(ast::Program *tree) {
     tree->accept(new SemPass2());
 }
+
+

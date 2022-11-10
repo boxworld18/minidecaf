@@ -59,7 +59,8 @@ class TransHelper {
     // Bitwise
     Temp genBNot(Temp);
     // Memory Access
-    Temp genPop(void);
+    // Temp genPop(void);
+    Temp genPop(Temp);
     void genPush(Temp);
     // Control-flow related
     void genJump(Label);

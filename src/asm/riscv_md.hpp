@@ -189,6 +189,8 @@ class RiscvDesc : public MachineDesc {
 
     // Step9
     util::Vector<tac::Tac *> params;
+    int pop_param_num;
+
     // translates a Call TAC into assembly instructions
     void emitCallTac(tac::Tac *);
     // translates a Push TAC into assembly instructions
@@ -217,6 +219,7 @@ class RiscvDesc : public MachineDesc {
 
     /*** the register allocator ***/
     RiscvReg *_reg[RiscvReg::TOTAL_NUM]; // registers of a machine
+    RiscvReg *_callee_save_reg[11]; // callee save registers
     int _lastUsedReg;                    // which register was used last?
 
     // acquires a register to read the value of a variable

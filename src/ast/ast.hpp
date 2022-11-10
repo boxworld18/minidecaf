@@ -153,6 +153,7 @@ class Lvalue : public ASTNode {
     } ATTR(lv_kind);
 
     type::Type *ATTR(type); // for semantic analysis
+    symb::Variable *ATTR(sym); // for tac generation
 };
 
 /* Node representing a program.
@@ -433,8 +434,6 @@ class VarRef : public Lvalue {
   public:
     Expr *owner; // only to pass compilation, not used
     std::string var;
-
-    symb::Variable *ATTR(sym); // for tac generation
 };
 
 class PointerRef : public Lvalue {
@@ -458,15 +457,12 @@ class PointerRef : public Lvalue {
 class LvalueExpr : public Expr {
   public:
     LvalueExpr(Lvalue *lv, Location *l);
-    //   LvalueExpr (Lvalue* lv, Expr* rv,
-    // 			  Location* l);
 
     virtual void accept(Visitor *);
     virtual void dumpTo(std::ostream &);
 
   public:
     Lvalue *lvalue;
-    // Expr* 	 rvalue;
 };
 /* Node representing an integer constant .
  *

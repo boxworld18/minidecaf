@@ -26,13 +26,7 @@ LvalueExpr::LvalueExpr(Lvalue *lv, Location *l) {
     lvalue = lv;
     // rvalue = NULL;
 }
-// LvalueExpr::LvalueExpr (Lvalue* lv, Expr* rv,
-// 				  Location* l){
-//   setBasicInfo(LVALUE_EXPR, l);
 
-//   lvalue = lv;
-//  // rvalue = rv;
-// }
 /* Visits the current node.
  *
  * PARAMETERS:
@@ -59,13 +53,3 @@ void LvalueExpr::dumpTo(std::ostream &os) {
     // }
     decIndent(os);
 }
-// void
-// AssignStmt::dumpTo (std::ostream& os) {
-//   ASTNode::dumpTo(os);
-//   newLine(os);
-//   os << left;
-
-//   newLine(os);
-//   os << e << ")";
-//   decIndent(os);
-// }
