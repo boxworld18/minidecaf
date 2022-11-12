@@ -493,10 +493,6 @@ void RiscvDesc::emitPopTac(Tac *t) {
  *   t     - the Call TAC
  */
 void RiscvDesc::emitCallTac(Tac *t) {
-    // eliminates useless assignments
-    if (!t->LiveOut->contains(t->op0.var))
-        return;
-
     // save param
     for (int i = params.size() - 1; i >= 8; i--) {
         int r = getRegForRead(params[i]->op0.var, 0, t->LiveOut);
