@@ -74,6 +74,10 @@ class SemPass2 : public ast::Visitor {
     // Step9
     virtual void visit(ast::CallExpr *);
 
+    // Step11
+    virtual void visit(ast::ArrayRef *);
+    virtual void visit(ast::IndexExpr *);
+
     // Visiting declarations
     virtual void visit(ast::FuncDefn *);
     virtual void visit(ast::Program *);
@@ -400,6 +404,84 @@ issue_error_type:
     ref->ATTR(type) = BaseType::Error;
     ref->ATTR(sym) = NULL;
     return;
+}
+
+/* Visits an ast::ArrayRef node.
+ *
+ * PARAMETERS:
+ *   e     - the ast::ArrayRef node
+ */
+void SemPass2::visit(ast::ArrayRef *ref) {
+    // CASE I: owner is NULL ==> referencing a local var or a member var?
+    Symbol *v = scopes->lookup(ref->var, ref->getLocation());
+    if (NULL == v) {
+        issue(ref->getLocation(), new SymbolNotFoundError(ref->var));
+        goto issue_error_type;
+
+    } else if (!v->isVariable()) {
+        issue(ref->getLocation(), new NotVariableError(v));
+        goto issue_error_type;
+
+    } else if (!v->getType()->isArrayType()) {
+        issue(ref->getLocation(), new NotArrayError());
+        goto issue_error_type;
+
+    } else if (ref->index == NULL) {
+        issue(ref->getLocation(), new NotArrayError());
+        goto issue_error_type;
+
+    } else {
+        ref->index->accept(this);
+
+        Type *atype = v->getType();
+        ast::IndexExpr *iexpr = ref->index;
+        
+        while (iexpr != NULL) {
+            iexpr->ATTR(type) = atype;
+            if (iexpr->expr->ATTR(type) != BaseType::Int) {
+                issue(ref->getLocation(), new UnexpectedTypeError(iexpr->expr->ATTR(type), BaseType::Int));
+                goto issue_error_type;
+            }
+            iexpr = iexpr->index;
+            if (atype->isArrayType()) {
+                atype = ((ArrayType*) atype)->getElementType();
+            }
+            
+            if (atype->equal(BaseType::Int) && iexpr != NULL) {
+                issue(ref->getLocation(), new DeclConflictError(ref->var, v));
+                goto issue_error_type;
+            }
+        }
+
+        if (!atype->equal(BaseType::Int)) {
+            issue(ref->getLocation(), new DeclConflictError(ref->var, v));
+            goto issue_error_type;
+        }
+
+        ref->ATTR(type) = BaseType::Int;
+        ref->ATTR(sym) = (Variable *)v;
+        ref->ATTR(lv_kind) = ast::Lvalue::ARRAY_ELE;
+        
+    }
+
+    return;
+
+    // sometimes "GOTO" will make things simpler. this is one of such cases:
+issue_error_type:
+    ref->ATTR(type) = BaseType::Error;
+    ref->ATTR(sym) = NULL;
+    return;
+}
+
+/* Visits an ast::IndexExpr node.
+ *
+ * PARAMETERS:
+ *   e     - the ast::IndexExpr node
+ */
+void SemPass2::visit(ast::IndexExpr *e) {
+    e->expr->accept(this);
+    if (e->index != NULL)
+        e->index->accept(this);
 }
 
 /* Visits an ast::VarDecl node.

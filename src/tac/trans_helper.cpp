@@ -549,12 +549,25 @@ void TransHelper::genStore(Temp src, Temp base, int offset) {
 /* Appends a LoadSymbol tac node to the current list.
  *
  * PARAMETERS:
- *   name   - the name of the variable
+ *   name - the name of the variable
  * RETURNS:
  *   the temporary containing the address of the variable
  */
 Temp TransHelper::genLoadSymbol(std::string name) {
     Temp addr = getNewTempI4();
     chainUp(Tac::LoadSymbol(addr, name));
+    return addr;
+}
+
+/* Appends a Alloc tac node to the current list.
+ *
+ * PARAMETERS:
+ *   size - the size of the memory
+ * RETURNS:
+ *   the temporary containing the address of the memory
+ */
+Temp TransHelper::genAlloc(int size) {
+    Temp addr = getNewTempI4();
+    chainUp(Tac::Alloc(addr, size));
     return addr;
 }

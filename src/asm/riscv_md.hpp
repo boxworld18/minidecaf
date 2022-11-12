@@ -205,6 +205,9 @@ class RiscvDesc : public MachineDesc {
     void emitLoadTac(tac::Tac *);
     // translates a Store TAC into assembly instructions
     void emitStoreTac(tac::Tac *);
+
+    // Step11
+    void emitAllocTac(tac::Tac *);
     
     // outputs an instruction
     void emit(std::string, const char *, const char *);

@@ -42,6 +42,7 @@ class SemPass1 : public ast::Visitor {
     virtual void visit(ast::DoWhileStmt *);
     // visiting types
     virtual void visit(ast::IntType *);
+    virtual void visit(ast::ArrayType *);
 };
 
 /* Visiting an ast::Program node.
@@ -286,6 +287,25 @@ void SemPass1::visit(ast::VarDecl *vdecl) {
  *   itype - the ast::IntType node to visit
  */
 void SemPass1::visit(ast::IntType *itype) { itype->ATTR(type) = BaseType::Int; }
+
+/* Visiting an ast::ArrayType node.
+ *
+ * PARAMETERS:
+ *   atype - the ast::ArrayType node to visit
+ */
+void SemPass1::visit(ast::ArrayType *atype) { 
+    ast::DimList *iexpr = atype->index;
+    assert(iexpr != NULL);
+    Type *t = BaseType::Int;
+
+    for (auto it = iexpr->begin(); it != iexpr->end(); ++it) {
+        if (*it <= 0)
+            issue(atype->getLocation(), new ZeroLengthedArrayError());
+        t = new ArrayType(t, *it);
+    }
+
+    atype->ATTR(type) = t;
+}
 
 /* Builds the symbol tables for the Mind compiler.
  *

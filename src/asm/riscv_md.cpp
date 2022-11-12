@@ -133,18 +133,34 @@ void RiscvDesc::emitPieces(scope::GlobalScope *gscope, Piece *ps,
         emit(EMPTY_STR, ".align 2", NULL);
 
         // data segment preamble
+        emit(EMPTY_STR, ".data", NULL);
         for (auto it = gscope->begin(); it != gscope->end(); it++) {
             if ((*it)->isVariable()) {
                 mind::symb::Variable *var= (mind::symb::Variable *)*it;
                 std::string name = var->getName();
-                emit(EMPTY_STR, ".data", NULL);
-                emit(EMPTY_STR, ".align 2", NULL);
                 emit(EMPTY_STR, (".globl " + var->getName()).c_str(), NULL);
-                emit(name, NULL, NULL);
                 std::ostringstream oss;
-                oss << ".word " << var->getGlobalInit();
-                emit(EMPTY_STR, oss.str().c_str(), NULL);
+                if (var->getType()->isArrayType()) {
+                    // Array
+                    mind::type::ArrayType *arr = (mind::type::ArrayType *)var->getType();
+                    int size = arr->getSize();
 
+                    oss << ".size " << var->getName() << ", " << size;
+                    emit(EMPTY_STR, oss.str().c_str(), NULL);
+                    oss.str("");
+
+                    emit(name, NULL, NULL);
+                    oss << ".zero " << size;
+                    emit(EMPTY_STR, oss.str().c_str(), NULL);
+                    oss.str("");
+
+
+                } else {
+                    // BaseType::Int
+                    emit(name, NULL, NULL);
+                    oss << ".word " << var->getGlobalInit();
+                    emit(EMPTY_STR, oss.str().c_str(), NULL);
+                }
             }
         }
 
@@ -350,6 +366,10 @@ void RiscvDesc::emitTac(Tac *t) {
         emitLoadSymbolTac(t);
         break;
 
+    case Tac::ALLOC:
+        emitAllocTac(t);
+        break;
+
     default:
         mind_assert(false); // should not appear inside a basic block
     }
@@ -493,10 +513,6 @@ void RiscvDesc::emitPopTac(Tac *t) {
  *   t     - the Call TAC
  */
 void RiscvDesc::emitCallTac(Tac *t) {
-    // eliminates useless assignments
-    if (!t->LiveOut->contains(t->op0.var))
-        return;
-
     // save param
     for (int i = params.size() - 1; i >= 8; i--) {
         int r = getRegForRead(params[i]->op0.var, 0, t->LiveOut);
@@ -570,6 +586,26 @@ void RiscvDesc::emitLoadSymbolTac(Tac *t) {
 }
 
 /* Step10 end */
+
+/* Step11 begin */
+
+/* Translates a ALLOC TAC into Riscv instructions
+ * 
+ * PARAMETERS:
+ *   t     - the Alloc TAC
+ */
+void RiscvDesc::emitAllocTac(Tac *t) {
+    // eliminates useless assignments
+    if (!t->LiveOut->contains(t->op0.var))
+        return;
+
+    int r0 = getRegForWrite(t->op0.var, 0, 0, t->LiveOut);
+    addInstr(RiscvInstr::ADDI, _reg[RiscvReg::SP], _reg[RiscvReg::SP], NULL, -(t->op1.ival), EMPTY_STR, NULL);
+    addInstr(RiscvInstr::MOVE, _reg[r0], _reg[RiscvReg::SP], NULL, 0, EMPTY_STR, NULL);
+}
+
+/* Step11 end */
+
 
 /* Outputs a single instruction line.
  *

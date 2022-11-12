@@ -667,6 +667,27 @@ Tac *Tac::LoadSymbol(Temp dest, std::string name) {
     return t;
 }
 
+/* Creates a Alloc tac.
+ * 
+ * NOTE:
+ *   allocate memory
+ * PARAMETERS:
+ *   base - result
+ *   size - size of the memory
+ * RETURNS:
+ *   a Alloc tac
+ */
+Tac *Tac::Alloc(Temp base, int size) {
+    REQUIRE_I4(base);
+
+    Tac *t = allocateNewTac(Tac::ALLOC);
+    t->op0.var = base;
+    t->op1.ival = size;
+
+    return t;
+}
+
+
 /* Outputs a temporary variable.
  *
  * PARAMETERS:
@@ -845,6 +866,10 @@ void Tac::dump(std::ostream &os) {
     
     case LOAD_SYMBOL:
         os << "    " << op0.var << " <- load_symbol " << op1.name;
+        break;
+
+    case ALLOC:
+        os << "    " << op0.var << " <- alloc " << op1.ival;
         break;
 
     default:
