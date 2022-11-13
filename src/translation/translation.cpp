@@ -504,7 +504,10 @@ void Translation::visit(ast::LvalueExpr *e) {
             if (sym->isGlobalVar()) {
                 // Global variables
                 Temp t = tr->genLoadSymbol(sym->getName());
-                e->ATTR(val) = tr->genLoad(t, 0);
+                if (sym->getType()->isArrayType())
+                    e->ATTR(val) = t;
+                else
+                    e->ATTR(val) = tr->genLoad(t, 0);
             } else {
                 // Local variables
                 e->ATTR(val) = sym->getTemp();
@@ -603,6 +606,14 @@ void Translation::visit(ast::VarDecl *decl) {
         // ArrayType
         Temp t = tr->genAlloc(((ArrayType *)type)->getSize());
         var->attachTemp(t);
+        if (decl->ainit != NULL) {
+            int cnt = 0;
+            for (auto it = decl->ainit->begin(); it != decl->ainit->end(); ++it) {
+                Temp imm = tr->genLoadImm4(*it);
+                tr->genStore(imm, t, cnt);
+                cnt += 4;
+            }
+        }
     }
 
 }

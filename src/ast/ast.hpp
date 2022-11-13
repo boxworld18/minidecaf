@@ -205,7 +205,7 @@ class Program : public ASTNode {
 class VarDecl : public Statement {
   public:
     VarDecl(std::string name, Type *type, Location *l);
-    VarDecl(std::string name, Type *type, int dim, Location *l);
+    VarDecl(std::string name, Type *type, DimList *d, Location *l);
 
     VarDecl(std::string name, Type *type, Expr *init, Location *l);
     virtual void accept(Visitor *);
@@ -215,6 +215,7 @@ class VarDecl : public Statement {
     std::string name;
     Type *type;
     Expr *init;
+    DimList *ainit;
 
     symb::Variable *ATTR(sym); // for semantic analysis
 };

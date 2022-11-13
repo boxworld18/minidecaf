@@ -392,9 +392,11 @@ void SemPass2::visit(ast::VarRef *ref) {
         ref->ATTR(type) = v->getType();
         ref->ATTR(sym) = (Variable *)v;
 
-        if (((Variable *)v)->isLocalVar()) {
+        if (ref->ATTR(sym)->isLocalVar())
             ref->ATTR(lv_kind) = ast::Lvalue::SIMPLE_VAR;
-        }
+
+        // if (ref->ATTR(sym)->getType()->isArrayType())
+        //     ref->ATTR(lv_kind) = ast::Lvalue::ARRAY_ELE;
     }
 
     return;
@@ -490,8 +492,14 @@ void SemPass2::visit(ast::IndexExpr *e) {
  *   decl     - the ast::VarDecl node
  */
 void SemPass2::visit(ast::VarDecl *decl) {
-    if (decl->init)
+    if (decl->init) {
         decl->init->accept(this);
+        if (!decl->type->ATTR(type)->compatible(decl->init->ATTR(type))) {
+            issue(decl->getLocation(), 
+                    new IncompatibleError(decl->init->ATTR(type), decl->type->ATTR(type)));
+        }
+    }
+
 }
 
 /* Visits an ast::AssignExpr node.
@@ -629,42 +637,49 @@ void SemPass2::visit(ast::DoWhileStmt *s) {
  */
 
 void SemPass2::visit(ast::CallExpr *e) {
-
     Symbol *s = scopes->lookup(e->ident, e->getLocation());
-    if (NULL == s) {
-        issue(e->getLocation(), new SymbolNotFoundError(e->ident));
-    } else if (!s->isFunction()) {
-        issue(e->getLocation(), new NotMethodError(s));
-    } else {
-        Function *f = (Function *)s;
-        e->ATTR(type) = f->getResultType();
-        e->ATTR(sym) = f;
+    Symbol *sym = scopes->lookup(e->ident + "__##DEF##__", e->getLocation());
 
-        auto plist = f->getAssociatedScope()->_params;
-            
-        // check length
-        if (plist.size() != e->args->length()) {
-            issue(e->getLocation(), new BadArgCountError(f));
+    if (NULL == s && NULL == sym) {
+        issue(e->getLocation(), new SymbolNotFoundError(e->ident));
+    } else {
+        Function *f = NULL;
+        if (NULL != s) { // Function have implementation
+            if (!s->isFunction())
+                issue(e->getLocation(), new NotMethodError(s));
+            else
+                f = (Function *)s;
+        } else { // Function have only declarations
+            if (!sym->isFunction())
+                issue(e->getLocation(), new NotMethodError(sym));
+            else 
+                f = (Function *)sym;
         }
 
+        e->ATTR(type) = f->getResultType();
+        e->ATTR(sym) = f;
+            
         ast::ExprList::iterator it;
-
         util::List<Type *> *type_list = f->getType()->getArgList();
         util::List<Type *>::iterator type_it = type_list->begin();
+
+        // check length
+        if (type_list->length() != e->args->length()) {
+            issue(e->getLocation(), new BadArgCountError(f));
+        }
 
         // compare arg type
         for (it = e->args->begin(); it != e->args->end(); ++it){
             (*it)->accept(this);
-            // if (!(*it)->ATTR(type)->compatible(*type_it)) {
-            //     issue(e->getLocation(), new UnexpectedTypeError((*it)->ATTR(type), *type_it));
-            //     type_it ++;
-            // }
+            if (!(*it)->ATTR(type)->equal(*type_it))
+                issue(e->getLocation(), new UnexpectedTypeError((*it)->ATTR(type), *type_it));
+            type_it++;
         }
     }
 
     return;
 }
-/* Step9 end*/
+/* Step9 end */
 
 /* Visits an ast::ReturnStmt node.
  *
@@ -687,16 +702,26 @@ void SemPass2::visit(ast::ReturnStmt *s) {
 void SemPass2::visit(ast::FuncDefn *f) {
     // Check Symbol
     Symbol *s = scopes->lookup(f->name, f->getLocation());
-    if (NULL == s) {
-        issue(f->getLocation(), new SymbolNotFoundError(f->name));
-    } else if (!s->isFunction()) {
-        issue(f->getLocation(), new NotMethodError(s));
-    } else {
-        Function *func = (Function *)s;
+    Symbol *sdef = scopes->lookup(f->name + "__##DEF##__", f->getLocation());
 
-        if (f->ret_type->ATTR(type)->compatible(func->getResultType()) == false) {
-            issue(f->getLocation(), new IncompatibleError(func->getResultType(), f->ret_type->ATTR(type)));
+    if (NULL == s && NULL == sdef) {
+        issue(f->getLocation(), new SymbolNotFoundError(f->name));
+    } else {
+        Function *func;
+        if (s != NULL) {
+            if (!s->isFunction())
+                issue(f->getLocation(), new NotMethodError(s));
+            else
+                func = (Function *)s;
+        } else {
+            if (!sdef->isFunction())
+                issue(f->getLocation(), new NotMethodError(sdef));
+            else
+                func = (Function *)sdef;
         }
+
+        if (f->ret_type->ATTR(type)->compatible(func->getResultType()) == false)
+            issue(f->getLocation(), new IncompatibleError(func->getResultType(), f->ret_type->ATTR(type)));
 
         retType = f->ret_type->ATTR(type);
 
@@ -704,16 +729,27 @@ void SemPass2::visit(ast::FuncDefn *f) {
         for (auto it = f->stmts->begin(); it != f->stmts->end(); ++it)
             (*it)->accept(this);
         scopes->close();
+
+        // compare type about declaration and implementation
+        if (s != NULL && sdef != NULL) {
+            util::List<Type *> *org_tlist = ((Function *)s)->getType()->getArgList();
+            util::List<Type *> *def_tlist = ((Function *)sdef)->getType()->getArgList();
+            util::List<Type *>::iterator org_it = org_tlist->begin();
+            util::List<Type *>::iterator def_it = def_tlist->begin();
+
+            // check length
+            if (org_tlist->length() != def_tlist->length()) {
+                issue(f->getLocation(), new DeclConflictError(f->name, s));
+            }
+
+            // check arg
+            for (; org_it != org_tlist->end(); ++org_it, ++def_it) {
+                if ((*org_it)->equal(*def_it) == false) {
+                    issue(f->getLocation(), new DeclConflictError(f->name, s));
+                }
+            }
+        }
     }
-
-    // ast::StmtList::iterator it;
-
-    // retType = f->ret_type->ATTR(type);
-
-    // scopes->open(f->ATTR(sym)->getAssociatedScope());
-    // for (it = f->stmts->begin(); it != f->stmts->end(); ++it)
-    //     (*it)->accept(this);
-    // scopes->close();
 }
 
 /* Visits an ast::Program node.

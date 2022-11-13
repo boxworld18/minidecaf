@@ -150,10 +150,22 @@ void RiscvDesc::emitPieces(scope::GlobalScope *gscope, Piece *ps,
                     oss.str("");
 
                     emit(name, NULL, NULL);
-                    oss << ".zero " << size;
+
+                    ast::DimList* init = var->getArrayInit();
+                    int length = 0;
+                    
+                    if (init != NULL) {
+                        length = init->length();
+                        for (auto it = init->begin(); it != init->end(); ++it) {
+                            oss << ".word " << (*it);
+                            emit(EMPTY_STR, oss.str().c_str(), NULL);
+                            oss.str("");
+                        }
+                    }
+
+                    oss << ".zero " << size - length * 4;
                     emit(EMPTY_STR, oss.str().c_str(), NULL);
                     oss.str("");
-
 
                 } else {
                     // BaseType::Int

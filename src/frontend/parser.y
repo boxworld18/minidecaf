@@ -103,7 +103,7 @@ void scan_end();
 %nterm<mind::ast::ArrayRef*> ArrayRef
 %nterm<mind::ast::ExprList*> ExprList OptExprList
 %nterm<mind::ast::IndexExpr*> IndexExpr
-%nterm<mind::ast::DimList*> Index
+%nterm<mind::ast::DimList*> Index OptInit InitList OptIndex
 /*   SUBSECTION 2.2: associativeness & precedences */
 %nonassoc QUESTION
 %left     OR
@@ -160,6 +160,26 @@ ParamList   : Type IDENTIFIER
             | ParamList COMMA Type IDENTIFIER
                 { $1->append(new ast::VarDecl($4,$3,POS(@3)));
                   $$ = $1; }
+            | Type IDENTIFIER OptIndex
+                { $$ = new ast::VarList();
+                  $$->append(new ast::VarDecl($2,new ast::ArrayType($3, POS(@1)),POS(@1))); }
+            | ParamList COMMA Type IDENTIFIER OptIndex
+                { $1->append(new ast::VarDecl($4,new ast::ArrayType($5, POS(@1)),POS(@3)));
+                  $$ = $1; }
+            ;
+
+OptIndex    : LBRACK RBRACK
+                { $$ = new ast::DimList(); 
+                  $$->append(1); }
+            | LBRACK RBRACK Index
+                { $$ = $3;
+                  $$->append(1);}
+            | LBRACK ICONST RBRACK
+                { $$ = new ast::DimList();
+                  $$->append(1); }
+            | LBRACK ICONST RBRACK Index
+                { $$ = $4;
+                  $$->append(1); }
             ;
 
 Type        : INT
@@ -181,6 +201,22 @@ VarDecl     : Type IDENTIFIER SEMICOLON
                 { $$ = new ast::VarDecl($2, $1, $4, POS(@3)); }
             | Type IDENTIFIER Index SEMICOLON
                 { $$ = new ast::VarDecl($2, new ast::ArrayType($3, POS(@1)), POS(@2)); }
+            | Type IDENTIFIER Index ASSIGN LBRACE OptInit RBRACE SEMICOLON
+                { $$ = new ast::VarDecl($2, new ast::ArrayType($3, POS(@1)), $6, POS(@3)); }
+            ;
+
+OptInit     : /* empty */
+                { $$ = new ast::DimList(); }
+            | InitList
+                { $$ = $1; }
+            ;
+
+InitList    : ICONST
+                { $$ = new ast::DimList();
+                  $$->append($1); }
+            | InitList COMMA ICONST
+                { $1->append($3);
+                  $$ = $1; }
             ;
 
 Index       : LBRACK ICONST RBRACK

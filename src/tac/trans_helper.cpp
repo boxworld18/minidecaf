@@ -107,6 +107,11 @@ Label TransHelper::getNewLabel(void) {
 Label TransHelper::getNewEntryLabel(Function *fn) {
     mind_assert(NULL != fn);
     std::string fn_name = fn->getName();
+    std::string pattern = "__##DEF##__";
+    int pos = fn_name.find(pattern);
+    if (pos > -1) {
+        fn_name = fn_name.erase(pos, pattern.length());
+    }
 
     Label l = new LabelObject();
     l->id = label_count++;
