@@ -87,18 +87,6 @@ RiscvDesc::RiscvDesc(void) {
     _reg[RiscvReg::A6] = new RiscvReg("a6", true); // argument
     _reg[RiscvReg::A7] = new RiscvReg("a7", true); // argument
 
-    _callee_save_reg[0] = _reg[9];
-    _callee_save_reg[1] = _reg[18];
-    _callee_save_reg[2] = _reg[19];
-    _callee_save_reg[3] = _reg[20];
-    _callee_save_reg[4] = _reg[21];
-    _callee_save_reg[5] = _reg[22];
-    _callee_save_reg[6] = _reg[23];
-    _callee_save_reg[7] = _reg[24];
-    _callee_save_reg[8] = _reg[25];
-    _callee_save_reg[9] = _reg[26];
-    _callee_save_reg[10] = _reg[27];
-
     params.clear();
     pop_param_num = 0;
 
@@ -253,10 +241,6 @@ RiscvInstr *RiscvDesc::prepareSingleChain(BasicBlock *b, FlowGraph *g) {
                  0, EMPTY_STR, NULL);
         addInstr(RiscvInstr::LW, _reg[RiscvReg::RA], _reg[RiscvReg::FP], NULL,
                  -4, EMPTY_STR, NULL);
-        // for (int i = 0; i < 11; i++) {
-        //     addInstr(RiscvInstr::LW, _callee_save_reg[i], _reg[RiscvReg::FP],
-        //              NULL, -12 - i * 4, EMPTY_STR, NULL);
-        // }
         addInstr(RiscvInstr::LW, _reg[RiscvReg::FP], _reg[RiscvReg::FP], NULL,
                  -8, EMPTY_STR, NULL);
         addInstr(RiscvInstr::RET, NULL, NULL, NULL, 0, EMPTY_STR, NULL);
@@ -499,9 +483,6 @@ void RiscvDesc::emitAssignTac(RiscvInstr::OpCode op, Tac *t) {
  */
 void RiscvDesc::emitPushTac(Tac *t) {
     params.push_back(t);
-    // int r = getRegForRead(t->op0.var, 0, t->LiveOut);
-    // addInstr(RiscvInstr::ADDI, _reg[RiscvReg::SP], _reg[RiscvReg::SP], NULL, -4, EMPTY_STR, NULL);
-    // addInstr(RiscvInstr::SW, _reg[r], _reg[RiscvReg::SP], NULL, -4, EMPTY_STR, NULL);
 }
 
 /* Translates a Pop TAC into Riscv instructions.
@@ -763,15 +744,9 @@ void RiscvDesc::emitProlog(Label entry_label, int frame_size) {
     emit(EMPTY_STR, "sw    fp, -8(sp)", NULL); // saves return address
     // establishes new stack frame (new context)
     emit(EMPTY_STR, "mv    fp, sp", NULL); // sets new frame pointer
-    oss << "addi  sp, sp, -" << (frame_size + 14 * WORD_SIZE); // 12 + 2 WORD's for old $fp and $ra
+    oss << "addi  sp, sp, -" << (frame_size + 2 * WORD_SIZE); // 2 WORD's for old $fp and $ra
     emit(EMPTY_STR, oss.str().c_str(), NULL);
     oss.str("");
-    // callee saved register
-    // for (int i = 0; i < 11; i++) {
-    //     oss << "sw    " << _callee_save_reg[i]->name << ", " << (i + 1) * WORD_SIZE << "(sp)";
-    //     emit(EMPTY_STR, oss.str().c_str(), NULL);
-    //     oss.str("");
-    // }
 
     pop_param_num = 0;
 }
