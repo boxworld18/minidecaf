@@ -135,30 +135,40 @@ void Translation::visit(ast::AssignExpr *s) {
     s->left->accept(this);
     s->e->accept(this);
 
+    const auto &sym = ((ast::VarRef*)s->left)->ATTR(sym);
     switch (s->left->ATTR(lv_kind)) {
         case ast::Lvalue::SIMPLE_VAR: {
-            const auto &sym = ((ast::VarRef*)s->left)->ATTR(sym);
             if (sym->isGlobalVar()) {
                 // Global variables
                 Temp t = tr->genLoadSymbol(sym->getName());
                 tr->genStore(s->e->ATTR(val), t, 0);
-                s->ATTR(val) = s->e->ATTR(val);
+                
             } else {
                 // Local variables
-                s->ATTR(val) = sym->getTemp();
-                tr->genAssign(s->ATTR(val), s->e->ATTR(val));
+                tr->genAssign(sym->getTemp(), s->e->ATTR(val));
             }
             break;
         }
         case ast::Lvalue::ARRAY_ELE: {
-            // TODO: Array
+            ast::ArrayRef *aref = (ast::ArrayRef*)s->left;
+            if (sym->isGlobalVar()) {
+                // Global arrays
+                Temp t = tr->genLoadSymbol(sym->getName());
+                t = tr->genAdd(t, aref->index->ATTR(val));
+                tr->genStore(s->e->ATTR(val), t , 0);
+            } else {
+                // Local arrays
+                Temp t = tr->genAdd(sym->getTemp(), aref->index->ATTR(val));
+                tr->genStore(s->e->ATTR(val), t, 0);
+            }
             break;
         }
         default:
             mind_assert(false); // impossible
     }
 
-    tr->genAssign(s->ATTR(val), s->e->ATTR(val));
+    s->ATTR(val) = s->e->ATTR(val);
+    // tr->genAssign(s->ATTR(val), s->e->ATTR(val));
 }
 
 /* Translating an ast::ExprStmt node.
@@ -487,14 +497,17 @@ void Translation::visit(ast::BitNotExpr *e) {
  */
 void Translation::visit(ast::LvalueExpr *e) {
     e->lvalue->accept(this);
+    const auto &sym = ((ast::VarRef*)e->lvalue)->ATTR(sym);
 
     switch (e->lvalue->ATTR(lv_kind)) {
         case ast::Lvalue::SIMPLE_VAR: {
-            const auto &sym = ((ast::VarRef*)e->lvalue)->ATTR(sym);
             if (sym->isGlobalVar()) {
                 // Global variables
                 Temp t = tr->genLoadSymbol(sym->getName());
-                e->ATTR(val) = tr->genLoad(t, 0);
+                if (sym->getType()->isArrayType())
+                    e->ATTR(val) = t;
+                else
+                    e->ATTR(val) = tr->genLoad(t, 0);
             } else {
                 // Local variables
                 e->ATTR(val) = sym->getTemp();
@@ -502,7 +515,17 @@ void Translation::visit(ast::LvalueExpr *e) {
             break;
         }
         case ast::Lvalue::ARRAY_ELE: {
-            // TODO: Array
+            ast::ArrayRef *aref = (ast::ArrayRef*)e->lvalue;
+            if (sym->isGlobalVar()) {
+                // Global arrays
+                Temp t = tr->genLoadSymbol(sym->getName());
+                t = tr->genAdd(t, aref->index->ATTR(val));
+                e->ATTR(val) = tr->genLoad(t, 0);
+            } else {
+                // Local arrays
+                Temp t = tr->genAdd(sym->getTemp(), aref->index->ATTR(val));
+                e->ATTR(val) = tr->genLoad(t, 0);
+            }
             break;
         }
         default:
@@ -528,17 +551,69 @@ void Translation::visit(ast::VarRef *ref) {
     // actually it is so simple :-)
 }
 
+/* Step11 begin */
+
+/* Translating an ast::ArrayRef node.
+ */
+void Translation::visit(ast::ArrayRef *ref) {    
+    switch (ref->ATTR(lv_kind)) {
+    case ast::Lvalue::ARRAY_ELE:
+        ref->index->accept(this);
+        break;
+
+    default:
+        mind_assert(false); // impossible
+    }
+}
+
+/* Translating an ast::IndexExpr node.
+ */
+void Translation::visit(ast::IndexExpr *e) {
+    e->expr->accept(this);
+
+    Type *type = ((ArrayType *)e->ATTR(type))->getElementType();
+    if (e->index != NULL)
+        e->index->accept(this);
+
+    Temp ssize = tr->genLoadImm4(type->getSize());
+    Temp lsize = tr->genMul(ssize, e->expr->ATTR(val));
+
+    if (e->index != NULL)
+        e->ATTR(val) = tr->genAdd(lsize, e->index->ATTR(val));
+    else
+        e->ATTR(val) = lsize;
+}
+
+/* Step11 end */
+
 /* Translating an ast::VarDecl node.
  */
 void Translation::visit(ast::VarDecl *decl) {
-    // TODO
     Variable *var = decl->ATTR(sym);
-    Temp t = tr->getNewTempI4();
-    var->attachTemp(t);
+    
+    if (var->isGlobalVar()) return;
 
-    if (decl->init != NULL) {
-        decl->init->accept(this);
-        tr->genAssign(t, decl->init->ATTR(val));
+    Type *type = decl->type->ATTR(type);
+    if (type->isBaseType()) {
+        // BaseType::Int
+        Temp t = tr->getNewTempI4();
+        var->attachTemp(t);
+        if (decl->init != NULL) {
+            decl->init->accept(this);
+            tr->genAssign(t, decl->init->ATTR(val));
+        }
+    } else if (type->isArrayType()) {
+        // ArrayType
+        Temp t = tr->genAlloc(((ArrayType *)type)->getSize());
+        var->attachTemp(t);
+        if (decl->ainit != NULL) {
+            int cnt = 0;
+            for (auto it = decl->ainit->begin(); it != decl->ainit->end(); ++it) {
+                Temp imm = tr->genLoadImm4(*it);
+                tr->genStore(imm, t, cnt);
+                cnt += 4;
+            }
+        }
     }
 
 }

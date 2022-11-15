@@ -77,6 +77,8 @@ class Variable : public Symbol {
     tac::Temp attached;
     // init value for global variable
     int global_init;
+    // init value for global array
+    ast::DimList *array_init;
 
   public:
     // Constructor
@@ -89,6 +91,10 @@ class Variable : public Symbol {
     void setGlobalInit(int val);
     // Get the init value for a global variable
     int getGlobalInit();
+    // Set init value for a global array
+    void setArrayInit(ast::DimList *val);
+    // Get the init value for a global array
+    ast::DimList *getArrayInit();
     // Tests whether it is a global variable
     bool isGlobalVar(void);
     // Tests whether it is a local variable

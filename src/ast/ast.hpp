@@ -70,6 +70,9 @@ class ASTNode {
         CONT_STMT,
         DO_WHILE_STMT,
         NULL_EXPR,
+        ARRAY_TYPE,
+        ARRAY_REF,
+        INDEX_EXPR,
     } NodeType;
 
   protected:
@@ -138,6 +141,24 @@ class Expr : public ASTNode {
     tac::Temp ATTR(val);    // for tac generation
 };
 
+/* Node representing array index expr.
+ *
+ * SERIALIZED FORM:
+ *   ( LBRACK Expr RBRACK IndexExpr)
+ */
+class IndexExpr : public Expr {
+  public:
+    IndexExpr(Expr *e, Location *l);
+    IndexExpr(Expr *e, IndexExpr *i, Location *l);
+    
+    virtual void accept(Visitor *);
+    virtual void dumpTo(std::ostream &);
+
+  public:
+    Expr *expr;
+    IndexExpr *index;
+};
+
 /* Node representing a left-value expression (lvalue).
  *
  * NOTE:
@@ -184,7 +205,7 @@ class Program : public ASTNode {
 class VarDecl : public Statement {
   public:
     VarDecl(std::string name, Type *type, Location *l);
-    VarDecl(std::string name, Type *type, int dim, Location *l);
+    VarDecl(std::string name, Type *type, DimList *d, Location *l);
 
     VarDecl(std::string name, Type *type, Expr *init, Location *l);
     virtual void accept(Visitor *);
@@ -194,6 +215,7 @@ class VarDecl : public Statement {
     std::string name;
     Type *type;
     Expr *init;
+    DimList *ainit;
 
     symb::Variable *ATTR(sym); // for semantic analysis
 };
@@ -245,6 +267,21 @@ class IntType : public Type {
 
     virtual void accept(Visitor *);
     virtual void dumpTo(std::ostream &);
+};
+
+/* Node representing the array type.
+ *
+ * SERIALIZED FORM:
+ *   (arraytype)
+ */
+class ArrayType : public Type {
+  public:
+    ArrayType(DimList *i, Location *l);
+
+    virtual void accept(Visitor *);
+    virtual void dumpTo(std::ostream &);
+  public:
+    DimList *index;
 };
 
 /* Node representing the Boolean type.
@@ -447,6 +484,18 @@ class PointerRef : public Lvalue {
     Expr *pointer;
 
     symb::Variable *ATTR(sym); // for tac generation
+};
+
+class ArrayRef : public Lvalue {
+  public:
+    ArrayRef(std::string var_name, IndexExpr *index, Location *l);
+
+    virtual void accept(Visitor *);
+    virtual void dumpTo(std::ostream &);
+
+  public:
+    IndexExpr *index;
+    std::string var;
 };
 
 /* Node representing an expression of lvalue.

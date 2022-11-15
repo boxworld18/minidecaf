@@ -87,18 +87,6 @@ RiscvDesc::RiscvDesc(void) {
     _reg[RiscvReg::A6] = new RiscvReg("a6", true); // argument
     _reg[RiscvReg::A7] = new RiscvReg("a7", true); // argument
 
-    _callee_save_reg[0] = _reg[9];
-    _callee_save_reg[1] = _reg[18];
-    _callee_save_reg[2] = _reg[19];
-    _callee_save_reg[3] = _reg[20];
-    _callee_save_reg[4] = _reg[21];
-    _callee_save_reg[5] = _reg[22];
-    _callee_save_reg[6] = _reg[23];
-    _callee_save_reg[7] = _reg[24];
-    _callee_save_reg[8] = _reg[25];
-    _callee_save_reg[9] = _reg[26];
-    _callee_save_reg[10] = _reg[27];
-
     params.clear();
     pop_param_num = 0;
 
@@ -133,18 +121,46 @@ void RiscvDesc::emitPieces(scope::GlobalScope *gscope, Piece *ps,
         emit(EMPTY_STR, ".align 2", NULL);
 
         // data segment preamble
+        emit(EMPTY_STR, ".data", NULL);
         for (auto it = gscope->begin(); it != gscope->end(); it++) {
             if ((*it)->isVariable()) {
                 mind::symb::Variable *var= (mind::symb::Variable *)*it;
                 std::string name = var->getName();
-                emit(EMPTY_STR, ".data", NULL);
-                emit(EMPTY_STR, ".align 2", NULL);
                 emit(EMPTY_STR, (".globl " + var->getName()).c_str(), NULL);
-                emit(name, NULL, NULL);
                 std::ostringstream oss;
-                oss << ".word " << var->getGlobalInit();
-                emit(EMPTY_STR, oss.str().c_str(), NULL);
+                if (var->getType()->isArrayType()) {
+                    // Array
+                    mind::type::ArrayType *arr = (mind::type::ArrayType *)var->getType();
+                    int size = arr->getSize();
 
+                    oss << ".size " << var->getName() << ", " << size;
+                    emit(EMPTY_STR, oss.str().c_str(), NULL);
+                    oss.str("");
+
+                    emit(name, NULL, NULL);
+
+                    ast::DimList* init = var->getArrayInit();
+                    int length = 0;
+                    
+                    if (init != NULL) {
+                        length = init->length();
+                        for (auto it = init->begin(); it != init->end(); ++it) {
+                            oss << ".word " << (*it);
+                            emit(EMPTY_STR, oss.str().c_str(), NULL);
+                            oss.str("");
+                        }
+                    }
+
+                    oss << ".zero " << size - length * 4;
+                    emit(EMPTY_STR, oss.str().c_str(), NULL);
+                    oss.str("");
+
+                } else {
+                    // BaseType::Int
+                    emit(name, NULL, NULL);
+                    oss << ".word " << var->getGlobalInit();
+                    emit(EMPTY_STR, oss.str().c_str(), NULL);
+                }
             }
         }
 
@@ -225,10 +241,6 @@ RiscvInstr *RiscvDesc::prepareSingleChain(BasicBlock *b, FlowGraph *g) {
                  0, EMPTY_STR, NULL);
         addInstr(RiscvInstr::LW, _reg[RiscvReg::RA], _reg[RiscvReg::FP], NULL,
                  -4, EMPTY_STR, NULL);
-        // for (int i = 0; i < 11; i++) {
-        //     addInstr(RiscvInstr::LW, _callee_save_reg[i], _reg[RiscvReg::FP],
-        //              NULL, -12 - i * 4, EMPTY_STR, NULL);
-        // }
         addInstr(RiscvInstr::LW, _reg[RiscvReg::FP], _reg[RiscvReg::FP], NULL,
                  -8, EMPTY_STR, NULL);
         addInstr(RiscvInstr::RET, NULL, NULL, NULL, 0, EMPTY_STR, NULL);
@@ -350,6 +362,10 @@ void RiscvDesc::emitTac(Tac *t) {
         emitLoadSymbolTac(t);
         break;
 
+    case Tac::ALLOC:
+        emitAllocTac(t);
+        break;
+
     default:
         mind_assert(false); // should not appear inside a basic block
     }
@@ -467,9 +483,6 @@ void RiscvDesc::emitAssignTac(RiscvInstr::OpCode op, Tac *t) {
  */
 void RiscvDesc::emitPushTac(Tac *t) {
     params.push_back(t);
-    // int r = getRegForRead(t->op0.var, 0, t->LiveOut);
-    // addInstr(RiscvInstr::ADDI, _reg[RiscvReg::SP], _reg[RiscvReg::SP], NULL, -4, EMPTY_STR, NULL);
-    // addInstr(RiscvInstr::SW, _reg[r], _reg[RiscvReg::SP], NULL, -4, EMPTY_STR, NULL);
 }
 
 /* Translates a Pop TAC into Riscv instructions.
@@ -566,6 +579,26 @@ void RiscvDesc::emitLoadSymbolTac(Tac *t) {
 }
 
 /* Step10 end */
+
+/* Step11 begin */
+
+/* Translates a ALLOC TAC into Riscv instructions
+ * 
+ * PARAMETERS:
+ *   t     - the Alloc TAC
+ */
+void RiscvDesc::emitAllocTac(Tac *t) {
+    // eliminates useless assignments
+    if (!t->LiveOut->contains(t->op0.var))
+        return;
+
+    int r0 = getRegForWrite(t->op0.var, 0, 0, t->LiveOut);
+    addInstr(RiscvInstr::ADDI, _reg[RiscvReg::SP], _reg[RiscvReg::SP], NULL, -(t->op1.ival), EMPTY_STR, NULL);
+    addInstr(RiscvInstr::MOVE, _reg[r0], _reg[RiscvReg::SP], NULL, 0, EMPTY_STR, NULL);
+}
+
+/* Step11 end */
+
 
 /* Outputs a single instruction line.
  *
@@ -711,15 +744,9 @@ void RiscvDesc::emitProlog(Label entry_label, int frame_size) {
     emit(EMPTY_STR, "sw    fp, -8(sp)", NULL); // saves return address
     // establishes new stack frame (new context)
     emit(EMPTY_STR, "mv    fp, sp", NULL); // sets new frame pointer
-    oss << "addi  sp, sp, -" << (frame_size + 14 * WORD_SIZE); // 12 + 2 WORD's for old $fp and $ra
+    oss << "addi  sp, sp, -" << (frame_size + 2 * WORD_SIZE); // 2 WORD's for old $fp and $ra
     emit(EMPTY_STR, oss.str().c_str(), NULL);
     oss.str("");
-    // callee saved register
-    // for (int i = 0; i < 11; i++) {
-    //     oss << "sw    " << _callee_save_reg[i]->name << ", " << (i + 1) * WORD_SIZE << "(sp)";
-    //     emit(EMPTY_STR, oss.str().c_str(), NULL);
-    //     oss.str("");
-    // }
 
     pop_param_num = 0;
 }

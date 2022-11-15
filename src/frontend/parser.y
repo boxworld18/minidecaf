@@ -100,7 +100,10 @@ void scan_end();
 %nterm<mind::ast::Expr*> Expr LvalueExpr OptExpr
 %nterm<mind::ast::VarDecl* > VarDecl
 %nterm<mind::ast::VarRef* > VarRef
+%nterm<mind::ast::ArrayRef*> ArrayRef
 %nterm<mind::ast::ExprList*> ExprList OptExprList
+%nterm<mind::ast::IndexExpr*> IndexExpr
+%nterm<mind::ast::DimList*> Index OptInit InitList OptIndex
 /*   SUBSECTION 2.2: associativeness & precedences */
 %nonassoc QUESTION
 %left     OR
@@ -157,6 +160,26 @@ ParamList   : Type IDENTIFIER
             | ParamList COMMA Type IDENTIFIER
                 { $1->append(new ast::VarDecl($4,$3,POS(@3)));
                   $$ = $1; }
+            | Type IDENTIFIER OptIndex
+                { $$ = new ast::VarList();
+                  $$->append(new ast::VarDecl($2,new ast::ArrayType($3, POS(@1)),POS(@1))); }
+            | ParamList COMMA Type IDENTIFIER OptIndex
+                { $1->append(new ast::VarDecl($4,new ast::ArrayType($5, POS(@1)),POS(@3)));
+                  $$ = $1; }
+            ;
+
+OptIndex    : LBRACK RBRACK
+                { $$ = new ast::DimList(); 
+                  $$->append(1); }
+            | LBRACK RBRACK Index
+                { $$ = $3;
+                  $$->append(1);}
+            | LBRACK ICONST RBRACK
+                { $$ = new ast::DimList();
+                  $$->append(1); }
+            | LBRACK ICONST RBRACK Index
+                { $$ = $4;
+                  $$->append(1); }
             ;
 
 Type        : INT
@@ -176,7 +199,33 @@ VarDecl     : Type IDENTIFIER SEMICOLON
                 { $$ = new ast::VarDecl($2, $1, POS(@2)); }
             | Type IDENTIFIER ASSIGN Expr SEMICOLON
                 { $$ = new ast::VarDecl($2, $1, $4, POS(@3)); }
+            | Type IDENTIFIER Index SEMICOLON
+                { $$ = new ast::VarDecl($2, new ast::ArrayType($3, POS(@1)), POS(@2)); }
+            | Type IDENTIFIER Index ASSIGN LBRACE OptInit RBRACE SEMICOLON
+                { $$ = new ast::VarDecl($2, new ast::ArrayType($3, POS(@1)), $6, POS(@3)); }
             ;
+
+OptInit     : /* empty */
+                { $$ = new ast::DimList(); }
+            | InitList
+                { $$ = $1; }
+            ;
+
+InitList    : ICONST
+                { $$ = new ast::DimList();
+                  $$->append($1); }
+            | InitList COMMA ICONST
+                { $1->append($3);
+                  $$ = $1; }
+            ;
+
+Index       : LBRACK ICONST RBRACK
+                { $$ = new ast::DimList();
+                  $$->append($2); }
+            | LBRACK ICONST RBRACK Index
+                { $4->append($2);
+                  $$ = $4; }
+
             
 Stmt        : ReturnStmt  { $$ = $1; }
             | ExprStmt    { $$ = $1; }
@@ -188,12 +237,13 @@ Stmt        : ReturnStmt  { $$ = $1; }
             | ContStmt    { $$ = $1; }
             | DoWhileStmt { $$ = $1; }
             ;
+
 ForStmt     : FOR LPAREN ExprStmt OptExpr SEMICOLON OptExpr RPAREN Stmt
                 { $$ = new ast::ForStmt($3, $4, $6, $8, POS(@1)); }
             | FOR LPAREN VarDecl OptExpr SEMICOLON OptExpr RPAREN Stmt
                 { $$ = new ast::ForStmt($3, $4, $6, $8, POS(@1)); }
-        
             ;
+
 ContStmt    : CONTINUE SEMICOLON
                 { $$ = new ast::ContStmt(POS(@1)); }
             ;
@@ -270,6 +320,8 @@ Expr        : ICONST
                 { $$ = new ast::GrtExpr($1, $3, POS(@2)); }
             | VarRef ASSIGN Expr
                 { $$ = new ast::AssignExpr($1, $3, POS(@2)); }
+            | ArrayRef ASSIGN Expr
+                { $$ = new ast::AssignExpr($1, $3, POS(@2)); }
             | LvalueExpr
                 { $$ = $1; }
             | IDENTIFIER LPAREN ExprList RPAREN
@@ -290,11 +342,22 @@ OptExprList : Expr
 
 LvalueExpr  : VarRef
                 { $$ = new ast::LvalueExpr($1, POS(@1));}
+            | ArrayRef
+                { $$ = new ast::LvalueExpr($1, POS(@1)); }
             ;
 
 VarRef      : IDENTIFIER
                 { $$ = new ast::VarRef($1, POS(@1)); }
             ;
+
+ArrayRef    : IDENTIFIER IndexExpr
+                { $$ = new ast::ArrayRef($1, $2, POS(@1)); }
+            ;
+
+IndexExpr   : LBRACK Expr RBRACK
+                { $$ = new ast::IndexExpr($2, NULL, POS(@1)); }
+            | LBRACK Expr RBRACK IndexExpr
+                { $$ = new ast::IndexExpr($2, $4, POS(@1)); }
 
 
 %%

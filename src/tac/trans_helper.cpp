@@ -107,6 +107,11 @@ Label TransHelper::getNewLabel(void) {
 Label TransHelper::getNewEntryLabel(Function *fn) {
     mind_assert(NULL != fn);
     std::string fn_name = fn->getName();
+    std::string pattern = "__##DEF##__";
+    int pos = fn_name.find(pattern);
+    if (pos > -1) {
+        fn_name = fn_name.erase(pos, pattern.length());
+    }
 
     Label l = new LabelObject();
     l->id = label_count++;
@@ -549,12 +554,25 @@ void TransHelper::genStore(Temp src, Temp base, int offset) {
 /* Appends a LoadSymbol tac node to the current list.
  *
  * PARAMETERS:
- *   name   - the name of the variable
+ *   name - the name of the variable
  * RETURNS:
  *   the temporary containing the address of the variable
  */
 Temp TransHelper::genLoadSymbol(std::string name) {
     Temp addr = getNewTempI4();
     chainUp(Tac::LoadSymbol(addr, name));
+    return addr;
+}
+
+/* Appends a Alloc tac node to the current list.
+ *
+ * PARAMETERS:
+ *   size - the size of the memory
+ * RETURNS:
+ *   the temporary containing the address of the memory
+ */
+Temp TransHelper::genAlloc(int size) {
+    Temp addr = getNewTempI4();
+    chainUp(Tac::Alloc(addr, size));
     return addr;
 }

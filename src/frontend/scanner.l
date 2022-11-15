@@ -61,10 +61,10 @@ IDENTIFIER    ([A-Za-z][_0-9A-Za-z]*)
 %%
 {WHITESPACE}  {       }
 {NEWLINE}     { loc.lines (yyleng); loc.step (); }
-"//"          { BEGIN(C);         }
-<C>{NEWLINE}  { BEGIN(0); loc.lines (yyleng); loc.step ();        }
+"//"          { BEGIN(C); }
+<C>{NEWLINE}  { BEGIN(0); loc.lines (yyleng); loc.step (); }
 <C><EOF>      { return yy::parser::make_END (loc); }
-<C>.          { /* ignore */      }
+<C>.          { /* ignore */ }
 
 "/*"          { BEGIN(B); }
 <B>"*/"       { BEGIN(0); }
@@ -72,20 +72,24 @@ IDENTIFIER    ([A-Za-z][_0-9A-Za-z]*)
 <B><EOF> { return yy::parser::make_END (loc); }
 <<EOF>> { return yy::parser::make_END (loc); }
 
-"int"       { return yy::parser::make_INT  (loc);      }
-"return"    { return yy::parser::make_RETURN  (loc);   }
-";"         { return yy::parser::make_SEMICOLON  (loc); }    
-"("         { return yy::parser::make_LPAREN  (loc); }
-")"         { return yy::parser::make_RPAREN  (loc); }
-"{"         { return yy::parser::make_LBRACE  (loc); }
-"}"         { return yy::parser::make_RBRACE  (loc); }
+"int"       { return yy::parser::make_INT       (loc); }
+"return"    { return yy::parser::make_RETURN    (loc); }
+";"         { return yy::parser::make_SEMICOLON (loc); }
+
+"("         { return yy::parser::make_LPAREN (loc); }
+")"         { return yy::parser::make_RPAREN (loc); }
+"["         { return yy::parser::make_LBRACK (loc); }
+"]"         { return yy::parser::make_RBRACK (loc); }
+"{"         { return yy::parser::make_LBRACE (loc); }
+"}"         { return yy::parser::make_RBRACE (loc); }
+
 "+"         { return yy::parser::make_PLUS  (loc); }
 "-"         { return yy::parser::make_MINUS (loc); }
 "*"         { return yy::parser::make_TIMES (loc); }
 "/"         { return yy::parser::make_SLASH (loc); }
-"%"         { return yy::parser::make_MOD  (loc); }
-"!"         { return yy::parser::make_LNOT (loc); }
-"~"         { return yy::parser::make_BNOT (loc); }
+"%"         { return yy::parser::make_MOD   (loc); }
+"!"         { return yy::parser::make_LNOT  (loc); }
+"~"         { return yy::parser::make_BNOT  (loc); }
 
 "=="        { return yy::parser::make_EQU (loc); }
 "!="        { return yy::parser::make_NEQ (loc); }
@@ -96,22 +100,22 @@ IDENTIFIER    ([A-Za-z][_0-9A-Za-z]*)
 "<"         { return yy::parser::make_LT  (loc); }
 ">"         { return yy::parser::make_GT  (loc); }
 
-"="         { return yy::parser::make_ASSIGN (loc); }
+"="         { return yy::parser::make_ASSIGN   (loc); }
 "?"         { return yy::parser::make_QUESTION (loc); }
-":"         { return yy::parser::make_COLON (loc); }
-","         { return yy::parser::make_COMMA (loc); }
+":"         { return yy::parser::make_COLON    (loc); }
+","         { return yy::parser::make_COMMA    (loc); }
 
-"if"        { return yy::parser::make_IF  (loc); }
-"else"      { return yy::parser::make_ELSE  (loc); }
-"do"        { return yy::parser::make_DO (loc); }
-"while"     { return yy::parser::make_WHILE (loc); }
-"for"       { return yy::parser::make_FOR (loc); }
-"break"     { return yy::parser::make_BREAK (loc); }
+"if"        { return yy::parser::make_IF       (loc); }
+"else"      { return yy::parser::make_ELSE     (loc); }
+"do"        { return yy::parser::make_DO       (loc); }
+"while"     { return yy::parser::make_WHILE    (loc); }
+"for"       { return yy::parser::make_FOR      (loc); }
+"break"     { return yy::parser::make_BREAK    (loc); }
 "continue"  { return yy::parser::make_CONTINUE (loc); }
 
-{INTEGER}     {return make_ICONST(yytext, loc);}
+{INTEGER}     { return make_ICONST(yytext, loc); }
 
-{IDENTIFIER}  {return yy::parser::make_IDENTIFIER (yytext, loc); }
+{IDENTIFIER}  { return yy::parser::make_IDENTIFIER (yytext, loc); }
 
 .             { } 
 

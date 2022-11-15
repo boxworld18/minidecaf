@@ -53,12 +53,16 @@ class Visitor {
     virtual void visit(SubExpr *) {}
     virtual void visit(NullExpr *) {}
     virtual void visit(CallExpr *) {}
+    virtual void visit(IndexExpr *) {}
 
     // Lvalues
     virtual void visit(VarRef *) {}
+    virtual void visit(ArrayRef *) {}
+
     // Types
     virtual void visit(BoolType *) {}
     virtual void visit(IntType *) {}
+    virtual void visit(ArrayType *) {}
 
     // Statements
     virtual void visit(ExprStmt *) {}

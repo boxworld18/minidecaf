@@ -73,8 +73,11 @@ bool ArrayType::equal(Type *t) {
 
     if (!t->isArrayType())
         return false;
-    else
+    else {
+        ArrayType *at = (ArrayType *)t;
+        mind_assert(at->getElementType()->getSize() == getElementType()->getSize());
         return (element_type->equal(((ArrayType *)t)->element_type));
+    }
 }
 
 /* Prints this type

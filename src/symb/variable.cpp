@@ -33,6 +33,8 @@ Variable::Variable(std::string n, Type *t, Location *l) {
     global_init = 0;
     attached = NULL;
 
+    array_init = NULL;
+
     mark = 0;
 }
 
@@ -51,6 +53,10 @@ bool Variable::isParameter(void) { return is_parameter; }
 void Variable::setGlobalInit(int val) { global_init = val; }
 
 int Variable::getGlobalInit() { return global_init; }
+
+void Variable::setArrayInit(ast::DimList *init) { array_init = init; }
+
+ast::DimList *Variable::getArrayInit() { return array_init; }
 
 /* Tests whether it is a local variable.
  *

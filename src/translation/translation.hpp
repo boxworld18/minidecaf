@@ -72,6 +72,10 @@ class Translation : public ast::Visitor {
     // Step9
     virtual void visit(ast::CallExpr *);
 
+    // Step11
+    virtual void visit(ast::ArrayRef *);
+    virtual void visit(ast::IndexExpr *);
+
     virtual ~Translation() {}
 
   private:

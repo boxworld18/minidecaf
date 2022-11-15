@@ -79,6 +79,9 @@ class TransHelper {
     void genStore(Temp, Temp, int);
     Temp genLoadSymbol(std::string);
 
+    // Array
+    Temp genAlloc(int);
+
     // gets the entire Piece list
     Piece *getPiece();
 

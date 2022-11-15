@@ -37,13 +37,13 @@ VarDecl::VarDecl(std::string n, Type *t, Expr *i, Location *l) {
     init = i;
 }
 
-VarDecl::VarDecl(std::string n, Type *t, int d, Location *l) {
+VarDecl::VarDecl(std::string n, Type *t, DimList *d, Location *l) {
 
     setBasicInfo(VAR_DECL, l);
 
     name = n;
     type = t;
-    init = NULL;
+    ainit = d;
 }
 
 /* Visits the current node.
@@ -60,12 +60,19 @@ void VarDecl::accept(Visitor *v) { v->visit(this); }
  */
 void VarDecl::dumpTo(std::ostream &os) {
     ASTNode::dumpTo(os);
-    if (init == NULL) {
+    if (init == NULL && ainit == NULL) {
         os << " " << '"' << name << '"' << " " << type << ")";
     } else {
         os << " " << '"' << name << '"' << " " << type << "=";
         newLine(os);
-        os << init << ")";
+        if (init)
+            os << init << ")";
+        if (ainit) {
+            os << "{";
+            for (auto it = ainit->begin(); it != ainit->end(); ++it)
+                os << *it << ",";
+            os << "}";
+        }
     }
     decIndent(os);
 }
